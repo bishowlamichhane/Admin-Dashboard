@@ -1,5 +1,6 @@
 "use client";
 import { useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
   Bell,
@@ -707,7 +708,7 @@ const Dashboard = () => {
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button variant="outline" size="sm">
-              View All Products
+              <Link to={"/products"}>View All Products</Link>
             </Button>
           </CardFooter>
         </Card>
