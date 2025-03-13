@@ -159,16 +159,6 @@ const Sidebar = () => {
               </div>
             </Link>
           )}
-          {!isCollapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-[#94a3b8] hover:bg-[#2e3650] hover:text-white"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          )}
         </div>
 
         {/* Search bar */}
