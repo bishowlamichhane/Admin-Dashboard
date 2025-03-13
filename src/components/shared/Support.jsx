@@ -1,16 +1,6 @@
 "use client";
 
-import { SelectItem } from "@/components/ui/select";
-
-import { SelectContent } from "@/components/ui/select";
-
-import { SelectValue } from "@/components/ui/select";
-
-import { SelectTrigger } from "@/components/ui/select";
-
-import { Select } from "@/components/ui/select";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   HelpCircle,
   Search,
@@ -25,6 +15,7 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  Menu,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -47,10 +38,19 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Support = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
+  const isMobile = useIsMobile();
 
   // FAQ data
   const faqCategories = [
@@ -293,7 +293,11 @@ const Support = () => {
   };
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div
+      className={`flex-1 p-4 md:p-6 ${
+        isMobile ? "ml-0" : "ml-0"
+      } transition-all duration-300`}
+    >
       <div className="flex flex-col space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -336,22 +340,26 @@ const Support = () => {
 
         {/* Support Tabs */}
         <Tabs defaultValue="faq" className="w-full">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
             <TabsTrigger value="faq">
               <HelpCircle className="h-4 w-4 mr-2" />
-              FAQ
+              <span className="hidden sm:inline">FAQ</span>
+              <span className="sm:hidden">FAQ</span>
             </TabsTrigger>
             <TabsTrigger value="docs">
               <FileText className="h-4 w-4 mr-2" />
-              Documentation
+              <span className="hidden sm:inline">Documentation</span>
+              <span className="sm:hidden">Docs</span>
             </TabsTrigger>
             <TabsTrigger value="videos">
               <Video className="h-4 w-4 mr-2" />
-              Video Tutorials
+              <span className="hidden sm:inline">Video Tutorials</span>
+              <span className="sm:hidden">Videos</span>
             </TabsTrigger>
             <TabsTrigger value="contact">
               <MessageSquare className="h-4 w-4 mr-2" />
-              Contact Us
+              <span className="hidden sm:inline">Contact Us</span>
+              <span className="sm:hidden">Contact</span>
             </TabsTrigger>
           </TabsList>
 

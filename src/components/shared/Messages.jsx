@@ -46,6 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { SidebarInset } from "@/components/ui/sidebar";
 
 // Sample user data with conversations
 const sampleUsers = [
@@ -529,7 +530,7 @@ const Messages = () => {
   };
 
   // Use a quick reply
-  const useQuickReply = (reply) => {
+  const handleQuickReplySelect = (reply) => {
     setMessageText(reply);
     setShowQuickReplies(false);
   };
@@ -545,274 +546,252 @@ const Messages = () => {
   };
 
   return (
-    <div className="ml-56 h-screen flex flex-col">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar - Conversations */}
-        <div className="w-80 border-r flex flex-col">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-bold mb-4">Messages</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
-              />
+    <SidebarInset>
+      <div className="h-screen flex flex-col">
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left sidebar - Conversations */}
+          <div className="w-80 border-r flex flex-col">
+            <div className="p-4 border-b">
+              <h2 className="text-xl font-bold mb-4">Messages</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="p-2 border-b">
-            <Tabs defaultValue="all" onValueChange={setFilter}>
-              <TabsList className="grid grid-cols-3 w-full">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="unread">Unread</TabsTrigger>
-                <TabsTrigger value="starred">Starred</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+            <div className="p-2 border-b">
+              <Tabs defaultValue="all" onValueChange={setFilter}>
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="unread">Unread</TabsTrigger>
+                  <TabsTrigger value="starred">Starred</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
-          <ScrollArea className="flex-1">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
-                    selectedUserId === user.id ? "bg-muted" : ""
-                  }`}
-                  onClick={() => handleSelectUser(user.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="relative">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>
-                          {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span
-                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                          user.status === "online"
-                            ? "bg-green-500"
-                            : "bg-gray-400"
-                        }`}
-                      ></span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium truncate">{user.name}</h3>
-                        <div className="flex items-center">
-                          <button
-                            onClick={(e) => toggleStar(user.id, e)}
-                            className="text-muted-foreground hover:text-yellow-400 transition-colors"
-                          >
-                            {user.isStarred ? (
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            ) : (
-                              <StarOff className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
+            <ScrollArea className="flex-1">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
+                      selectedUserId === user.id ? "bg-muted" : ""
+                    }`}
+                    onClick={() => handleSelectUser(user.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user.avatar} alt={user.name} />
+                          <AvatarFallback>
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span
+                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
+                            user.status === "online"
+                              ? "bg-green-500"
+                              : "bg-gray-400"
+                          }`}
+                        ></span>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.lastMessage}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          {user.status === "online" ? (
-                            "Online"
-                          ) : (
-                            <>
-                              <Clock className="h-3 w-3 mr-1" />
-                              {user.lastSeen}
-                            </>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {formatMessageTime(user.lastMessageTime)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium truncate">{user.name}</h3>
+                          <div className="flex items-center">
+                            <button
+                              onClick={(e) => toggleStar(user.id, e)}
+                              className="text-muted-foreground hover:text-yellow-400 transition-colors"
+                            >
+                              {user.isStarred ? (
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              ) : (
+                                <StarOff className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {user.lastMessage}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-muted-foreground flex items-center">
+                            {user.status === "online" ? (
+                              "Online"
+                            ) : (
+                              <>
+                                <Clock className="h-3 w-3 mr-1" />
+                                {user.lastSeen}
+                              </>
+                            )}
                           </span>
-                          {user.unreadCount > 0 && (
-                            <Badge className="h-5 w-5 rounded-full p-0 flex items-center justify-center bg-primary">
-                              {user.unreadCount}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {formatMessageTime(user.lastMessageTime)}
+                            </span>
+                            {user.unreadCount > 0 && (
+                              <Badge className="h-5 w-5 rounded-full p-0 flex items-center justify-center bg-primary">
+                                {user.unreadCount}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  No conversations found
                 </div>
-              ))
-            ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                No conversations found
-              </div>
-            )}
-          </ScrollArea>
-        </div>
+              )}
+            </ScrollArea>
+          </div>
 
-        {/* Main chat area */}
-        {selectedUser ? (
-          <div className="flex-1 flex flex-col">
-            {/* Chat header */}
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={selectedUser.avatar}
-                    alt={selectedUser.name}
-                  />
-                  <AvatarFallback>
-                    {selectedUser.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">{selectedUser.name}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedUser.status === "online" ? (
-                      <span className="text-green-500">Online</span>
-                    ) : (
-                      `Last seen ${selectedUser.lastSeen}`
-                    )}
-                  </p>
+          {/* Main chat area */}
+          {selectedUser ? (
+            <div className="flex-1 flex flex-col">
+              {/* Chat header */}
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={selectedUser.avatar}
+                      alt={selectedUser.name}
+                    />
+                    <AvatarFallback>
+                      {selectedUser.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium">{selectedUser.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedUser.status === "online" ? (
+                        <span className="text-green-500">Online</span>
+                      ) : (
+                        `Last seen ${selectedUser.lastSeen}`
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Phone className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Call</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Video className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Video Call</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowUserInfo(!showUserInfo)}
+                        >
+                          <Info className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>User Info</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Mark as unread</DropdownMenuItem>
+                      <DropdownMenuItem>Archive conversation</DropdownMenuItem>
+                      <DropdownMenuItem>Mute notifications</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600">
+                        Block user
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Phone className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Call</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Video className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Video Call</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowUserInfo(!showUserInfo)}
-                      >
-                        <Info className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>User Info</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-                    <DropdownMenuItem>Archive conversation</DropdownMenuItem>
-                    <DropdownMenuItem>Mute notifications</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
-                      Block user
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Chat messages */}
-            <div className="flex-1 overflow-auto p-4 bg-muted/30">
-              <div className="space-y-4">
-                {selectedUser.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === "admin"
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
+              {/* Chat messages */}
+              <div className="flex-1 overflow-auto p-4 bg-muted/30">
+                <div className="space-y-4">
+                  {selectedUser.messages.map((message) => (
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
+                      key={message.id}
+                      className={`flex ${
                         message.sender === "admin"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
-                      <p>{message.content}</p>
                       <div
-                        className={`flex items-center justify-end mt-1 text-xs ${
+                        className={`max-w-[70%] rounded-lg p-3 ${
                           message.sender === "admin"
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
                         }`}
                       >
-                        <span>{message.time}</span>
-                        {message.sender === "admin" && (
-                          <span className="ml-1">
-                            {message.status === "read" ? (
-                              <CheckCheck className="h-3 w-3" />
-                            ) : (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </span>
-                        )}
+                        <p>{message.content}</p>
+                        <div
+                          className={`flex items-center justify-end mt-1 text-xs ${
+                            message.sender === "admin"
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          <span>{message.time}</span>
+                          {message.sender === "admin" && (
+                            <span className="ml-1">
+                              {message.status === "read" ? (
+                                <CheckCheck className="h-3 w-3" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-            </div>
 
-            {/* Chat input */}
-            <div className="p-4 border-t">
-              <div className="relative">
-                <div className="absolute left-0 bottom-0 flex items-center p-2 gap-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Paperclip className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Attach File</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <ImageIcon className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Attach Image</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <div className="relative">
+              {/* Chat input */}
+              <div className="p-4 border-t">
+                <div className="relative">
+                  <div className="absolute left-0 bottom-0 flex items-center p-2 gap-1">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -820,242 +799,273 @@ const Messages = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() =>
-                              setShowQuickReplies(!showQuickReplies)
-                            }
                           >
-                            <Smile className="h-5 w-5" />
+                            <Paperclip className="h-5 w-5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Quick Replies</TooltipContent>
+                        <TooltipContent>Attach File</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
 
-                    {showQuickReplies && (
-                      <Card className="absolute bottom-10 left-0 w-80 z-10">
-                        <CardHeader className="p-3">
-                          <CardTitle className="text-sm">
-                            Quick Replies
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <ScrollArea className="h-60">
-                            <div className="p-3 space-y-2">
-                              {quickReplies.map((reply, index) => (
-                                <div
-                                  key={index}
-                                  className="p-2 rounded-md hover:bg-muted cursor-pointer"
-                                  onClick={() => {
-                                    setQuickReplyText(reply);
-                                    useQuickReply(reply);
-                                  }}
-                                >
-                                  {reply}
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <ImageIcon className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Attach Image</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <div className="relative">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                setShowQuickReplies(!showQuickReplies)
+                              }
+                            >
+                              <Smile className="h-5 w-5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Quick Replies</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      {showQuickReplies && (
+                        <Card className="absolute bottom-10 left-0 w-80 z-10">
+                          <CardHeader className="p-3">
+                            <CardTitle className="text-sm">
+                              Quick Replies
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <ScrollArea className="h-60">
+                              <div className="p-3 space-y-2">
+                                {quickReplies.map((reply, index) => (
+                                  <div
+                                    key={index}
+                                    className="p-2 rounded-md hover:bg-muted cursor-pointer"
+                                    onClick={() =>
+                                      handleQuickReplySelect(reply)
+                                    }
+                                  >
+                                    {reply}
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <Input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  className="pl-28 pr-14 py-6"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
-
-                <div className="absolute right-0 bottom-0 p-2">
-                  <Button
-                    size="icon"
-                    className="h-8 w-8 rounded-full"
-                    onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <h3 className="text-lg font-medium">Select a conversation</h3>
-              <p className="text-muted-foreground">
-                Choose a conversation from the list to start messaging
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* User info sidebar */}
-        {showUserInfo && selectedUser && (
-          <div className="w-80 border-l flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="font-medium">User Information</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowUserInfo(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <div className="p-4 text-center">
-                <Avatar className="h-20 w-20 mx-auto">
-                  <AvatarImage
-                    src={selectedUser.avatar}
-                    alt={selectedUser.name}
+                  <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    className="pl-28 pr-14 py-6"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
                   />
-                  <AvatarFallback className="text-lg">
-                    {selectedUser.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <h3 className="font-bold mt-2">{selectedUser.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedUser.email}
+
+                  <div className="absolute right-0 bottom-0 p-2">
+                    <Button
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      onClick={handleSendMessage}
+                      disabled={!messageText.trim()}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <h3 className="text-lg font-medium">Select a conversation</h3>
+                <p className="text-muted-foreground">
+                  Choose a conversation from the list to start messaging
                 </p>
-                <div className="flex justify-center mt-2 gap-2">
-                  <Button variant="outline" size="sm">
-                    <User className="h-4 w-4 mr-1" />
-                    Profile
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <ShoppingBag className="h-4 w-4 mr-1" />
-                    Orders
-                  </Button>
-                </div>
               </div>
+            </div>
+          )}
 
-              <Separator />
-
-              <div className="p-4">
-                <h4 className="text-sm font-medium mb-3">
-                  Contact Information
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex items-start">
-                    <Mail className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.email}</p>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <Phone className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.phone}</p>
-                      <p className="text-xs text-muted-foreground">Phone</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.address}</p>
-                      <p className="text-xs text-muted-foreground">Address</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="p-4">
-                <h4 className="text-sm font-medium mb-3">
-                  Customer Information
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex items-start">
-                    <Calendar className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.customerSince}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Customer Since
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <ShoppingBag className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.totalOrders}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Total Orders
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <DollarSign className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{selectedUser.totalSpent}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Total Spent
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="p-4">
-                <h4 className="text-sm font-medium mb-3">Recent Orders</h4>
-                <div className="space-y-2">
-                  <div className="rounded-md border p-3">
-                    <div className="flex justify-between items-center">
-                      <p className="font-medium">Order #ORD7823</p>
-                      <Badge
-                        variant="outline"
-                        className="bg-green-100 text-green-800 border-green-300"
-                      >
-                        Delivered
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      May 15, 2023
-                    </p>
-                    <p className="text-sm mt-1">3 items • $125.99</p>
-                  </div>
-                  <div className="rounded-md border p-3">
-                    <div className="flex justify-between items-center">
-                      <p className="font-medium">Order #ORD7824</p>
-                      <Badge
-                        variant="outline"
-                        className="bg-blue-100 text-blue-800 border-blue-300"
-                      >
-                        Processing
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Apr 20, 2023
-                    </p>
-                    <p className="text-sm mt-1">1 item • $89.99</p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full mt-3">
-                  View All Orders
+          {/* User info sidebar */}
+          {showUserInfo && selectedUser && (
+            <div className="w-80 border-l flex flex-col">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="font-medium">User Information</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowUserInfo(false)}
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
-            </ScrollArea>
-          </div>
-        )}
+
+              <ScrollArea className="flex-1">
+                <div className="p-4 text-center">
+                  <Avatar className="h-20 w-20 mx-auto">
+                    <AvatarImage
+                      src={selectedUser.avatar}
+                      alt={selectedUser.name}
+                    />
+                    <AvatarFallback className="text-lg">
+                      {selectedUser.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="font-bold mt-2">{selectedUser.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser.email}
+                  </p>
+                  <div className="flex justify-center mt-2 gap-2">
+                    <Button variant="outline" size="sm">
+                      <User className="h-4 w-4 mr-1" />
+                      Profile
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <ShoppingBag className="h-4 w-4 mr-1" />
+                      Orders
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="p-4">
+                  <h4 className="text-sm font-medium mb-3">
+                    Contact Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <Mail className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.email}</p>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <Phone className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.phone}</p>
+                        <p className="text-xs text-muted-foreground">Phone</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.address}</p>
+                        <p className="text-xs text-muted-foreground">Address</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="p-4">
+                  <h4 className="text-sm font-medium mb-3">
+                    Customer Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <Calendar className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.customerSince}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Customer Since
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <ShoppingBag className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.totalOrders}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Total Orders
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <DollarSign className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{selectedUser.totalSpent}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Total Spent
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="p-4">
+                  <h4 className="text-sm font-medium mb-3">Recent Orders</h4>
+                  <div className="space-y-2">
+                    <div className="rounded-md border p-3">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium">Order #ORD7823</p>
+                        <Badge
+                          variant="outline"
+                          className="bg-green-100 text-green-800 border-green-300"
+                        >
+                          Delivered
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        May 15, 2023
+                      </p>
+                      <p className="text-sm mt-1">3 items • $125.99</p>
+                    </div>
+                    <div className="rounded-md border p-3">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium">Order #ORD7824</p>
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-100 text-blue-800 border-blue-300"
+                        >
+                          Processing
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Apr 20, 2023
+                      </p>
+                      <p className="text-sm mt-1">1 item • $89.99</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full mt-3">
+                    View All Orders
+                  </Button>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </SidebarInset>
   );
 };
 

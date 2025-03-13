@@ -41,7 +41,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Sample order data
 const sampleOrders = [
@@ -275,7 +275,7 @@ const OrdersTable = ({ orders, status }) => {
     : "No orders found matching your filters.";
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -380,10 +380,10 @@ const Orders = () => {
   }, [orders, searchQuery, statusFilter, timeFilter]);
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="flex flex-col space-y-6">
         {/* Order Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -441,7 +441,7 @@ const Orders = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Revenue
@@ -484,7 +484,7 @@ const Orders = () => {
           <CardContent>
             <Tabs defaultValue="all" className="mb-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                <TabsList>
+                <TabsList className="flex-wrap">
                   <TabsTrigger
                     value="all"
                     onClick={() => setStatusFilter("all")}
@@ -511,7 +511,7 @@ const Orders = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-[250px]">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -533,98 +533,29 @@ const Orders = () => {
                       <div className="p-4 border-b">
                         <p className="font-medium">Filter by</p>
                       </div>
-                      <div className="p-4 space-y-4">
-                        <div className="space-y-2">
-                          <p className="text-sm">Time Period</p>
-                          <Select
-                            value={timeFilter}
-                            onValueChange={setTimeFilter}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select period" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Time</SelectItem>
-                              <SelectItem value="today">Today</SelectItem>
-                              <SelectItem value="week">This Week</SelectItem>
-                              <SelectItem value="month">This Month</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="p-4">
+                        <Select
+                          onValueChange={setTimeFilter}
+                          defaultValue={timeFilter}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="week">Last Week</SelectItem>
+                            <SelectItem value="month">Last Month</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </PopoverContent>
                   </Popover>
                 </div>
               </div>
 
-              <TabsContent value="all" className="m-0">
-                <OrdersTable orders={filteredOrders} status="" />
-              </TabsContent>
-
-              <TabsContent value="delivered" className="m-0">
-                <OrdersTable
-                  orders={orders.filter(
-                    (order) =>
-                      order.status?.toLowerCase() === "delivered" &&
-                      (order.customerName
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                        order.id
-                          ?.toLowerCase()
-                          .includes(searchQuery.toLowerCase()))
-                  )}
-                  status="Delivered"
-                />
-              </TabsContent>
-
-              <TabsContent value="processing" className="m-0">
-                <OrdersTable
-                  orders={orders.filter(
-                    (order) =>
-                      order.status?.toLowerCase() === "processing" &&
-                      (order.customerName
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                        order.id
-                          ?.toLowerCase()
-                          .includes(searchQuery.toLowerCase()))
-                  )}
-                  status="Processing"
-                />
-              </TabsContent>
-
-              <TabsContent value="pending" className="m-0">
-                <OrdersTable
-                  orders={orders.filter(
-                    (order) =>
-                      order.status?.toLowerCase() === "pending" &&
-                      (order.customerName
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                        order.id
-                          ?.toLowerCase()
-                          .includes(searchQuery.toLowerCase()))
-                  )}
-                  status="Pending"
-                />
-              </TabsContent>
+              <OrdersTable orders={filteredOrders} status={statusFilter} />
             </Tabs>
-
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                Showing{" "}
-                <span className="font-medium">{filteredOrders.length}</span> of{" "}
-                <span className="font-medium">{orders.length}</span> orders
-              </div>
-              <div className="space-x-2">
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

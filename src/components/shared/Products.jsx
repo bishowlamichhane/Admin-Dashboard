@@ -475,7 +475,7 @@ const Products = () => {
   const featuredCount = items.filter((item) => item.featured).length;
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="flex flex-col space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -488,7 +488,7 @@ const Products = () => {
         </div>
 
         {/* Product Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <ProductStatCard
             title="Total Products"
             value={totalProducts}
@@ -560,12 +560,12 @@ const Products = () => {
                   Showing {filterItems.length} of {items.length} products
                 </CardDescription>
               </div>
-              <div className="flex gap-2 mt-2 sm:mt-0">
+              <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
                 <Select
                   value={categoryFilter}
                   onValueChange={setCategoryFilter}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -579,7 +579,7 @@ const Products = () => {
                 </Select>
 
                 <Select value={stockFilter} onValueChange={setStockFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by stock" />
                   </SelectTrigger>
                   <SelectContent>
@@ -593,7 +593,7 @@ const Products = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -653,7 +653,7 @@ const Products = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 flex flex-wrap">
                 <TabsTrigger value="basic">Basic Information</TabsTrigger>
                 <TabsTrigger value="media">Media & Visibility</TabsTrigger>
                 <TabsTrigger value="inventory">Inventory</TabsTrigger>
@@ -726,18 +726,19 @@ const Products = () => {
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="imageUpload">Product Image</Label>
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div className="relative w-32 h-32 rounded-md overflow-hidden border">
                           <img
                             src={
                               imagePreview ||
-                              "/placeholder.svg?height=128&width=128"
+                              "/placeholder.svg?height=128&width=128" ||
+                              "/placeholder.svg"
                             }
                             alt="Product Preview"
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 w-full">
                           <Label
                             htmlFor="imageUpload"
                             className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors"

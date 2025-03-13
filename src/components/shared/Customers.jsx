@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import {
   Search,
-  Users,
   UserPlus,
   Filter,
   Mail,
@@ -15,15 +14,17 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Star,
-  StarHalf,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
+  StarOff,
   Clock,
   CheckCircle,
   AlertCircle,
   Truck,
+  StarHalf,
+  Edit,
+  Trash2,
+  Eye,
+  Download,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -956,7 +957,7 @@ const Customers = () => {
   };
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="flex flex-col space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

@@ -304,9 +304,9 @@ const Dashboard = () => {
   const monthlyTargetProgress = 68;
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       {/* Header with search and notifications */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -314,13 +314,13 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="text"
               placeholder="Search..."
-              className="pl-10 w-[250px]"
+              className="pl-10 w-full sm:w-[250px]"
             />
           </div>
 
@@ -346,7 +346,7 @@ const Dashboard = () => {
       </div>
 
       {/* Key metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -413,7 +413,7 @@ const Dashboard = () => {
       </div>
 
       {/* Order status overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Order Status</CardTitle>
@@ -525,7 +525,7 @@ const Dashboard = () => {
                 <Progress value={monthlyTargetProgress} className="h-2" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">Current</div>
                   <div className="text-2xl font-bold">
@@ -564,7 +564,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
         <Card className="col-span-1">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -609,56 +609,60 @@ const Dashboard = () => {
       </div>
 
       {/* Recent orders and top products */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Recent Orders</CardTitle>
             <CardDescription>Latest customer purchases</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map((order) => {
-                  const getStatusColor = (status) => {
-                    switch (status.toLowerCase()) {
-                      case "delivered":
-                        return "bg-green-100 text-green-800 border-green-300";
-                      case "processing":
-                        return "bg-blue-100 text-blue-800 border-blue-300";
-                      case "pending":
-                        return "bg-yellow-100 text-yellow-800 border-yellow-300";
-                      case "cancelled":
-                        return "bg-red-100 text-red-800 border-red-300";
-                      default:
-                        return "bg-gray-100 text-gray-800 border-gray-300";
-                    }
-                  };
+          <CardContent className="overflow-auto">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentOrders.map((order) => {
+                    const getStatusColor = (status) => {
+                      switch (status.toLowerCase()) {
+                        case "delivered":
+                          return "bg-green-100 text-green-800 border-green-300";
+                        case "processing":
+                          return "bg-blue-100 text-blue-800 border-blue-300";
+                        case "pending":
+                          return "bg-yellow-100 text-yellow-800 border-yellow-300";
+                        case "cancelled":
+                          return "bg-red-100 text-red-800 border-red-300";
+                        default:
+                          return "bg-gray-100 text-gray-800 border-gray-300";
+                      }
+                    };
 
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>{order.customerName}</TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${order.totalAmount.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          {order.id}
+                        </TableCell>
+                        <TableCell>{order.customerName}</TableCell>
+                        <TableCell>
+                          <Badge className={`${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${order.totalAmount.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button variant="outline" size="sm">

@@ -1,23 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  User,
-  Bell,
-  Shield,
-  CreditCard,
-  Globe,
-  Moon,
-  Sun,
-  Mail,
-  Phone,
-  Lock,
-  LogOut,
-  Save,
-  Trash2,
-  AlertTriangle,
-  Check,
-} from "lucide-react";
+import { CreditCard, Moon, Sun, Save, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -52,12 +36,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const theme = "light";
+  const isMobile = useIsMobile();
+
   // Form states
   const [profileForm, setProfileForm] = useState({
     name: "John Doe",
@@ -121,7 +108,11 @@ const Settings = () => {
   };
 
   return (
-    <div className="ml-56 p-6 max-w-[1200px]">
+    <div
+      className={`flex-1 p-4 md:p-6 ${
+        isMobile ? "ml-0" : "ml-0"
+      } transition-all duration-300`}
+    >
       <div className="flex flex-col space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -153,7 +144,7 @@ const Settings = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 w-full">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
