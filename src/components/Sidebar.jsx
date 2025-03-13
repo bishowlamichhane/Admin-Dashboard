@@ -7,7 +7,6 @@ import {
   Package,
   ShoppingCart,
   Users,
-  Receipt,
   MessageSquare,
   Settings,
   HelpCircle,
@@ -29,7 +28,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
-import { ScrollArea } from "./ui/scroll-area";
+// Custom CSS for hiding scrollbars while maintaining scroll functionality
+const noScrollbarStyles = `
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`;
 
 const Sidebar = () => {
   const location = useLocation();
@@ -78,7 +86,6 @@ const Sidebar = () => {
       icon: Users,
       to: "/customers",
     },
-
     {
       title: "Analytics",
       icon: BarChart3,
@@ -123,29 +130,44 @@ const Sidebar = () => {
 
   return (
     <TooltipProvider delayDuration={0}>
+      <style>{noScrollbarStyles}</style>
       <div
         className={cn(
-          "fixed flex flex-col h-screen bg-slate-900 transition-all duration-300 z-30",
+          "fixed flex flex-col h-screen bg-[#1a1f36] transition-all duration-300 z-30 shadow-lg",
           isCollapsed ? "w-[70px]" : "w-64"
         )}
       >
         {/* Logo and brand */}
         <div
           className={cn(
-            "flex h-16 items-center px-4 border-b border-slate-800",
+            "flex h-16 items-center px-4 border-b border-[#2e3650]",
             isCollapsed ? "justify-center" : "justify-between"
           )}
         >
           {!isCollapsed && (
             <Link to="/" className="flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-green-500" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#4f46e5]">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
               <span className="font-bold text-xl text-white">OpenShop</span>
             </Link>
           )}
           {isCollapsed && (
             <Link to="/">
-              <BarChart3 className="h-6 w-6 text-green-500" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#4f46e5]">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
             </Link>
+          )}
+          {!isCollapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-[#94a3b8] hover:bg-[#2e3650] hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
           )}
         </div>
 
@@ -154,15 +176,15 @@ const Sidebar = () => {
           <div className="px-4 py-3">
             <div
               className={cn(
-                "flex items-center h-9 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm",
-                isSearchFocused && "ring-1 ring-green-500"
+                "flex items-center h-9 rounded-md border border-[#2e3650] bg-[#252b43] px-3 text-sm",
+                isSearchFocused && "ring-1 ring-[#4f46e5]"
               )}
             >
-              <Search className="mr-2 h-4 w-4 text-slate-400" />
+              <Search className="mr-2 h-4 w-4 text-[#94a3b8]" />
               <input
                 type="text"
                 placeholder="Search..."
-                className="flex-1 bg-transparent text-slate-300 placeholder:text-slate-500 focus:outline-none"
+                className="flex-1 bg-transparent text-white placeholder:text-[#94a3b8] focus:outline-none"
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
               />
@@ -171,12 +193,12 @@ const Sidebar = () => {
         )}
 
         {/* Navigation section */}
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto no-scrollbar">
           <div className="py-2">
             <div className="px-3 py-2">
               {!isCollapsed && (
-                <h3 className="mb-2 text-xs font-medium text-slate-500">
-                  MAIN MENU
+                <h3 className="mb-2 text-xs font-medium text-[#94a3b8] uppercase tracking-wider">
+                  Main Menu
                 </h3>
               )}
               <nav className="space-y-1">
@@ -193,8 +215,8 @@ const Sidebar = () => {
                             className={cn(
                               "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all",
                               active
-                                ? "bg-slate-800 text-white"
-                                : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                                ? "bg-[#252b43] text-white"
+                                : "text-[#cbd5e1] hover:bg-[#252b43] hover:text-white",
                               isCollapsed ? "justify-center px-2" : ""
                             )}
                           >
@@ -202,8 +224,8 @@ const Sidebar = () => {
                               className={cn(
                                 "h-5 w-5",
                                 active
-                                  ? "text-green-500"
-                                  : "text-slate-400 group-hover:text-green-500"
+                                  ? "text-[#4f46e5]"
+                                  : "text-[#94a3b8] group-hover:text-[#4f46e5]"
                               )}
                             />
                             {!isCollapsed && (
@@ -212,26 +234,26 @@ const Sidebar = () => {
                                 {item.count && (
                                   <Badge
                                     variant="outline"
-                                    className="ml-auto bg-slate-800 text-green-500 border-green-500/50 px-2 py-0 h-5"
+                                    className="ml-auto bg-[#252b43] text-[#4f46e5] border-[#4f46e5]/50 px-2 py-0 h-5"
                                   >
                                     {item.count}
                                   </Badge>
                                 )}
                                 {item.alert && !item.count && (
-                                  <span className="ml-auto flex h-2 w-2 rounded-full bg-green-500"></span>
+                                  <span className="ml-auto flex h-2 w-2 rounded-full bg-[#4f46e5]"></span>
                                 )}
                               </>
                             )}
                             {isCollapsed && item.count && (
                               <Badge
                                 variant="outline"
-                                className="absolute -top-1 -right-1 bg-slate-800 text-green-500 border-green-500/50 px-1.5 h-4 min-w-4 flex items-center justify-center"
+                                className="absolute -top-1 -right-1 bg-[#252b43] text-[#4f46e5] border-[#4f46e5]/50 px-1.5 h-4 min-w-4 flex items-center justify-center"
                               >
                                 {item.count}
                               </Badge>
                             )}
                             {isCollapsed && item.alert && !item.count && (
-                              <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-green-500"></span>
+                              <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-[#4f46e5]"></span>
                             )}
                           </Link>
                         </div>
@@ -239,7 +261,7 @@ const Sidebar = () => {
                       {isCollapsed && (
                         <TooltipContent
                           side="right"
-                          className="bg-slate-800 border-slate-700 text-white"
+                          className="bg-[#252b43] border-[#2e3650] text-white"
                         >
                           {item.title}
                         </TooltipContent>
@@ -250,13 +272,13 @@ const Sidebar = () => {
               </nav>
             </div>
 
-            <div className="my-4 h-[1px] bg-slate-800 mx-3"></div>
+            <div className="my-4 h-[1px] bg-[#2e3650] mx-3"></div>
 
             {/* Support section */}
             <div className="px-3 py-2">
               {!isCollapsed && (
-                <h3 className="mb-2 text-xs font-medium text-slate-500">
-                  SUPPORT
+                <h3 className="mb-2 text-xs font-medium text-[#94a3b8] uppercase tracking-wider">
+                  Support
                 </h3>
               )}
               <div className="space-y-1">
@@ -273,8 +295,8 @@ const Sidebar = () => {
                             className={cn(
                               "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all",
                               active
-                                ? "bg-slate-800 text-white"
-                                : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                                ? "bg-[#252b43] text-white"
+                                : "text-[#cbd5e1] hover:bg-[#252b43] hover:text-white",
                               isCollapsed ? "justify-center px-2" : ""
                             )}
                           >
@@ -282,8 +304,8 @@ const Sidebar = () => {
                               className={cn(
                                 "h-5 w-5",
                                 active
-                                  ? "text-green-500"
-                                  : "text-slate-400 group-hover:text-green-500"
+                                  ? "text-[#4f46e5]"
+                                  : "text-[#94a3b8] group-hover:text-[#4f46e5]"
                               )}
                             />
                             {!isCollapsed && <span>{item.title}</span>}
@@ -293,7 +315,7 @@ const Sidebar = () => {
                       {isCollapsed && (
                         <TooltipContent
                           side="right"
-                          className="bg-slate-800 border-slate-700 text-white"
+                          className="bg-[#252b43] border-[#2e3650] text-white"
                         >
                           {item.title}
                         </TooltipContent>
@@ -304,15 +326,15 @@ const Sidebar = () => {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* User and logout section */}
-        <div className="mt-auto border-t border-slate-800 p-4">
+        <div className="mt-auto border-t border-[#2e3650] p-4">
           {!isCollapsed ? (
             <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-9 w-9 border border-slate-700">
+              <Avatar className="h-9 w-9 border border-[#2e3650]">
                 <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback className="bg-slate-800 text-green-500">
+                <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
                   JD
                 </AvatarFallback>
               </Avatar>
@@ -320,18 +342,26 @@ const Sidebar = () => {
                 <p className="text-sm font-medium text-white truncate">
                   John Doe
                 </p>
-                <p className="text-xs text-slate-400 truncate">
+                <p className="text-xs text-[#94a3b8] truncate">
                   john.doe@example.com
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="text-[#94a3b8] hover:bg-[#252b43] hover:text-white md:hidden"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex justify-center mb-3">
-                  <Avatar className="h-9 w-9 border border-slate-700">
+                  <Avatar className="h-9 w-9 border border-[#2e3650]">
                     <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback className="bg-slate-800 text-green-500">
+                    <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
                       JD
                     </AvatarFallback>
                   </Avatar>
@@ -339,11 +369,11 @@ const Sidebar = () => {
               </TooltipTrigger>
               <TooltipContent
                 side="right"
-                className="bg-slate-800 border-slate-700 text-white"
+                className="bg-[#252b43] border-[#2e3650] text-white"
               >
                 John Doe
                 <br />
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[#94a3b8]">
                   john.doe@example.com
                 </span>
               </TooltipContent>
@@ -356,7 +386,7 @@ const Sidebar = () => {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "flex items-center gap-2 w-full text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 transition-all",
+                    "flex items-center gap-2 w-full text-sm text-[#f87171] hover:bg-[#252b43] hover:text-[#ef4444] transition-all",
                     isCollapsed ? "justify-center px-2" : ""
                   )}
                 >
@@ -368,13 +398,25 @@ const Sidebar = () => {
             {isCollapsed && (
               <TooltipContent
                 side="right"
-                className="bg-slate-800 border-slate-700 text-white"
+                className="bg-[#252b43] border-[#2e3650] text-white"
               >
                 Logout
               </TooltipContent>
             )}
           </Tooltip>
         </div>
+
+        {/* Collapse button for desktop - only visible when sidebar is collapsed */}
+        {isCollapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-20 h-6 w-6 rounded-full bg-[#1a1f36] border border-[#2e3650] text-[#94a3b8] hover:text-white hidden md:flex"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     </TooltipProvider>
   );

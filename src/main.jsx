@@ -11,6 +11,9 @@ import Dashboard from "./components/shared/Dashboard.jsx";
 import { Provider } from "react-redux";
 import OpenSales from "./store/index.js";
 import Analytics from "./components/shared/Analytics.jsx";
+import Notifications from "./components/shared/Notifications.jsx";
+import Settings from "./components/shared/Settings.jsx";
+import Support from "./components/shared/Support.jsx";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +43,18 @@ const router = createBrowserRouter([
       {
         path: "/messages",
         element: <Messages />,
+      },
+      {
+        path: "/notifications",
+        element: <Notifications />,
+      },
+      {
+        path: "/settings",
+        element: <Settings />,
+      },
+      {
+        path: "/support",
+        element: <Support />,
       },
     ],
   },
