@@ -305,7 +305,7 @@ const Dashboard = () => {
   const monthlyTargetProgress = 68;
 
   return (
-    <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
+    <div className="p-4 md:p-6 max-w-[1200px] max-h-screen mx-auto">
       {/* Header with search and notifications */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
         <div>
