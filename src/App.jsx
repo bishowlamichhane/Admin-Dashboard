@@ -79,7 +79,7 @@ const App = () => {
       {/* Main content with responsive margin */}
       <div
         className={cn(
-          "flex-1 overflow-auto transition-all duration-300 ease-in-out",
+          "flex-1  overflow-auto transition-all duration-300 ease-in-out",
           isSidebarOpen ? "lg:ml-0" : "lg:ml-0",
           isMobile ? "ml-0 p-4 pt-16" : "ml-0"
         )}
