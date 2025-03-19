@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "./firebase/firebaseConfig"; // Import Firebase Auth
+
 import Sidebar from "./components/Sidebar";
 import { Outlet } from "react-router-dom";
 import { Menu, X } from "lucide-react";
@@ -10,6 +13,7 @@ import { cn } from "./lib/utils";
 const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState(null); // State to store user data
 
   // Check if we're on mobile
   useEffect(() => {
@@ -40,6 +44,21 @@ const App = () => {
     if (isMobile) {
       setIsSidebarOpen(false);
     }
+  };
+
+  // Handle user authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser); // Set user data if logged in
+    });
+
+    return () => unsubscribe(); // Clean up on unmount
+  }, []);
+
+  // Function to handle user logout
+  const handleLogout = async () => {
+    await signOut(auth);
+    setUser(null); // Clear user state
   };
 
   return (
@@ -79,11 +98,20 @@ const App = () => {
       {/* Main content with responsive margin */}
       <div
         className={cn(
-          "flex-1  overflow-auto transition-all duration-300 ease-in-out",
+          "flex-1 overflow-auto transition-all duration-300 ease-in-out",
           isSidebarOpen ? "lg:ml-0" : "lg:ml-0",
           isMobile ? "ml-0 p-4 pt-16" : "ml-0"
         )}
       >
+        {user ? (
+          <div>
+            <h1>Welcome, {user.email}</h1> {/* Display user email */}
+            <Button onClick={handleLogout}>Logout</Button>
+          </div>
+        ) : (
+          <p>Please log in to access your account.</p>
+        )}
+
         <Outlet />
       </div>
     </div>
