@@ -1,19 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "./firebase/firebaseConfig"; // Import Firebase Auth
-
+import { useNavigate } from "react-router-dom";
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Sidebar from "./components/Sidebar";
 import { Outlet } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "./lib/utils";
 
+// Initialize Firebase (make sure to import your firebase config)
+import { app } from "./firebase/firebaseConfig";
+const auth = getAuth(app);
+const firestore = getFirestore(app);
+
 const App = () => {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [user, setUser] = useState(null); // State to store user data
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -48,8 +56,31 @@ const App = () => {
 
   // Handle user authentication state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser); // Set user data if logged in
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
+
+      if (currentUser) {
+        setUser(currentUser);
+
+        // Fetch user data from Firestore
+        try {
+          const userDocRef = doc(firestore, "users", currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          } else {
+            console.log("No user data found in Firestore");
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      } else {
+        // User is not logged in, redirect to landing page
+        window.location.href = "https://landing-page-woad-eta.vercel.app/";
+      }
+
+      setLoading(false);
     });
 
     return () => unsubscribe(); // Clean up on unmount
@@ -57,9 +88,22 @@ const App = () => {
 
   // Function to handle user logout
   const handleLogout = async () => {
-    await signOut(auth);
-    setUser(null); // Clear user state
+    try {
+      await signOut(auth);
+      // Redirect to landing page after logout
+      window.location.href = "https://landing-page-woad-eta.vercel.app/";
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-950">
@@ -92,7 +136,7 @@ const App = () => {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <Sidebar />
+        <Sidebar userData={userData} />
       </div>
 
       {/* Main content with responsive margin */}
@@ -103,16 +147,39 @@ const App = () => {
           isMobile ? "ml-0 p-4 pt-16" : "ml-0"
         )}
       >
-        {user ? (
+        {/* Header with user info and logout button */}
+        <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 p-4 border-b flex justify-between items-center">
           <div>
-            <h1>Welcome, {user.email}</h1> {/* Display user email */}
-            <Button onClick={handleLogout}>Logout</Button>
+            {userData && (
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">
+                  {userData.fname ? userData.fname.charAt(0) : "U"}
+                </div>
+                <div>
+                  <p className="font-medium">
+                    {userData.fname} {userData.lname}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {userData.email}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <p>Please log in to access your account.</p>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="flex items-center gap-1"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
 
-        <Outlet />
+        <div className="p-4">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

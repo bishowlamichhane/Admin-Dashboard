@@ -28,6 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+
 // Custom CSS for hiding scrollbars while maintaining scroll functionality
 const noScrollbarStyles = `
   .no-scrollbar::-webkit-scrollbar {
@@ -39,7 +40,7 @@ const noScrollbarStyles = `
   }
 `;
 
-const Sidebar = () => {
+const Sidebar = ({ userData, companyData, handleLogout }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -128,6 +129,16 @@ const Sidebar = () => {
     return location.pathname.startsWith(path);
   };
 
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!userData) return "U";
+
+    const fname = userData.fname || "";
+    const lname = userData.lname || "";
+
+    return `${fname.charAt(0)}${lname.charAt(0)}`.toUpperCase();
+  };
+
   return (
     <TooltipProvider delayDuration={0}>
       <style>{noScrollbarStyles}</style>
@@ -149,7 +160,9 @@ const Sidebar = () => {
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#4f46e5]">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-xl text-white">OpenShop</span>
+              <span className="font-bold text-xl text-white">
+                {companyData?.name || "OpenShop"}
+              </span>
             </Link>
           )}
           {isCollapsed && (
@@ -325,15 +338,15 @@ const Sidebar = () => {
               <Avatar className="h-9 w-9 border border-[#2e3650]">
                 <AvatarImage src="https://github.com/shadcn.png" />
                 <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
-                  JD
+                  {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium text-white truncate">
-                  John Doe
+                  {userData ? `${userData.fname} ${userData.lname}` : "User"}
                 </p>
                 <p className="text-xs text-[#94a3b8] truncate">
-                  john.doe@example.com
+                  {userData?.email || "user@example.com"}
                 </p>
               </div>
               <Button
@@ -352,7 +365,7 @@ const Sidebar = () => {
                   <Avatar className="h-9 w-9 border border-[#2e3650]">
                     <AvatarImage src="https://github.com/shadcn.png" />
                     <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
-                      JD
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -361,10 +374,10 @@ const Sidebar = () => {
                 side="right"
                 className="bg-[#252b43] border-[#2e3650] text-white"
               >
-                John Doe
+                {userData ? `${userData.fname} ${userData.lname}` : "User"}
                 <br />
                 <span className="text-xs text-[#94a3b8]">
-                  john.doe@example.com
+                  {userData?.email || "user@example.com"}
                 </span>
               </TooltipContent>
             </Tooltip>
@@ -379,6 +392,7 @@ const Sidebar = () => {
                     "flex items-center gap-2 w-full text-sm text-[#f87171] hover:bg-[#252b43] hover:text-[#ef4444] transition-all",
                     isCollapsed ? "justify-center px-2" : ""
                   )}
+                  onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5" />
                   {!isCollapsed && <span>Logout</span>}
