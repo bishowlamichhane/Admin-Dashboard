@@ -72,15 +72,14 @@ const App = () => {
           } else {
             console.log("No user data found in Firestore");
             // If no user data is found, redirect to landing page
-            window.location.href =
-              "https://landing-page-woad-eta.vercel.app/login";
+            window.location.href = "https://landing-page-woad-eta.vercel.app/";
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
       } else {
         // User is not logged in, redirect to landing page
-        window.location.href = "https://landing-page-woad-eta.vercel.app/login";
+        window.location.href = "https://landing-page-woad-eta.vercel.app/";
       }
 
       setLoading(false);
