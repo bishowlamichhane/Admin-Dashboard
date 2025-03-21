@@ -3,7 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut,
+  browserLocalPersistence,
+  setPersistence,
+  signInWithCustomToken,
+} from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Sidebar from "./components/Sidebar";
 import { Outlet } from "react-router-dom";
@@ -16,6 +23,15 @@ import { app } from "./firebase/firebaseConfig";
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+// Set persistence explicitly
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Firebase persistence set to LOCAL");
+  })
+  .catch((error) => {
+    console.error("Error setting persistence:", error);
+  });
+
 const App = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -23,7 +39,7 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -31,7 +47,6 @@ const App = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
 
-      // Auto-close sidebar on mobile
       if (mobile && isSidebarOpen) {
         setIsSidebarOpen(false);
       } else if (!mobile && !isSidebarOpen) {
@@ -39,13 +54,8 @@ const App = () => {
       }
     };
 
-    // Initial check
     checkIfMobile();
-
-    // Add event listener
     window.addEventListener("resize", checkIfMobile);
-
-    // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, [isSidebarOpen]);
 
@@ -56,99 +66,215 @@ const App = () => {
     }
   };
 
+  // Check for token in URL (new approach)
+  useEffect(() => {
+    const checkForToken = async () => {
+      console.log("Checking for token in URL...");
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+
+      if (token) {
+        console.log("Token found in URL, attempting to sign in...");
+        try {
+          // Remove token from URL to prevent issues on refresh
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+
+          // Store token in localStorage for debugging
+          localStorage.setItem("firebase_token", token);
+
+          // We'll use this token in the next step
+          console.log("Token stored in localStorage");
+        } catch (error) {
+          console.error("Error processing token:", error);
+          setAuthError(error.message);
+        }
+      } else {
+        console.log("No token found in URL");
+      }
+    };
+
+    checkForToken();
+  }, []);
+
   // Handle user authentication state
   useEffect(() => {
-    console.log("Checking authentication state...");
+    console.log("Setting up auth state listener...");
 
-    // Add a delay to ensure Firebase has time to initialize
-    const timeoutId = setTimeout(() => {
-      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        console.log(
-          "Auth state changed:",
-          currentUser ? "User logged in" : "No user"
-        );
-        setLoading(true);
+    // Check localStorage for debugging
+    console.log("Local Storage Contents:", Object.keys(localStorage));
 
-        if (currentUser) {
-          setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log(
+        "Auth state changed:",
+        currentUser ? `User logged in: ${currentUser.email}` : "No user"
+      );
 
-          // Fetch user data from Firestore
-          try {
-            const userDocRef = doc(firestore, "users", currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
+      if (currentUser) {
+        console.log("User ID:", currentUser.uid);
+        console.log("Email:", currentUser.email);
+        console.log("Email verified:", currentUser.emailVerified);
+        console.log("Provider data:", currentUser.providerData);
 
-            if (userDoc.exists()) {
-              setUserData(userDoc.data());
-            } else {
-              console.log("No user data found in Firestore");
-            }
-          } catch (error) {
-            console.error("Error fetching user data:", error);
+        setUser(currentUser);
+
+        // Fetch user data from Firestore
+        try {
+          console.log("Fetching user data from Firestore...");
+          const userDocRef = doc(firestore, "users", currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            console.log("User data found:", userDoc.data());
+            setUserData(userDoc.data());
+          } else {
+            console.log(
+              "No user data found in Firestore for UID:",
+              currentUser.uid
+            );
+            setAuthError("User data not found in database");
           }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setAuthError(`Error fetching user data: ${error.message}`);
+        }
+      } else {
+        console.log("No user found in auth state");
+        setUser(null);
+        setUserData(null);
 
-          setLoading(false);
+        // Check if we have a token in localStorage (from URL parameter)
+        const storedToken = localStorage.getItem("firebase_token");
+        if (storedToken) {
+          console.log("Found stored token, attempting to use it...");
+          try {
+            // This is just for debugging - in a real implementation we'd use a proper backend verification
+            console.log("Token available but not using it automatically");
+          } catch (error) {
+            console.error("Error using stored token:", error);
+            setAuthError(`Error using stored token: ${error.message}`);
+          }
         } else {
-          // Only redirect if we've explicitly checked auth and no user is found
-          setAuthChecked(true);
-          setUser(null);
-          setUserData(null);
-          setLoading(false);
-
-          // Add a small delay before redirecting to prevent immediate redirect
+          console.log("No stored token found");
+          // Wait a bit before redirecting to avoid immediate redirect loops
           setTimeout(() => {
             if (!auth.currentUser) {
-              console.log("No user found, redirecting to landing page");
+              console.log("Redirecting to landing page login...");
               window.location.href =
-                "https://landing-page-woad-eta.vercel.app/login";
+                "https://landing-page-woad-eta.vercel.app/login?reason=no_auth";
             }
-          }, 1000);
+          }, 2000);
         }
-      });
+      }
 
-      return () => {
-        unsubscribe(); // Clean up on unmount
-        clearTimeout(timeoutId);
-      };
-    }, 1000); // 1 second delay to ensure Firebase is initialized
+      setLoading(false);
+    });
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      console.log("Cleaning up auth state listener");
+      unsubscribe();
+    };
   }, []);
 
   // Function to handle user logout
   const handleLogout = async () => {
     try {
+      console.log("Logging out...");
       await signOut(auth);
-      // Redirect to landing page after logout
+      localStorage.removeItem("firebase_token"); // Clear stored token
+      console.log("Logged out successfully");
       window.location.href = "https://landing-page-woad-eta.vercel.app/";
     } catch (error) {
       console.error("Error signing out:", error);
     }
   };
 
+  // Manual login function for debugging
+  const attemptManualLogin = async () => {
+    const storedToken = localStorage.getItem("firebase_token");
+    if (storedToken) {
+      try {
+        console.log("Attempting manual login with stored token...");
+        // In a real implementation, you'd verify this token on your backend
+        // For now, we're just showing this for debugging
+        alert(
+          "Token found but manual login not implemented. This is just for debugging."
+        );
+      } catch (error) {
+        console.error("Manual login error:", error);
+        setAuthError(`Manual login error: ${error.message}`);
+      }
+    } else {
+      alert("No authentication token found");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        <p className="ml-2">Loading authentication state...</p>
+      <div className="flex h-screen items-center justify-center flex-col">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p>Loading authentication state...</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          This may take a moment
+        </p>
       </div>
     );
   }
 
-  // If we've checked auth and there's no user, show a message instead of redirecting immediately
-  if (authChecked && !user) {
+  if (authError) {
     return (
-      <div className="flex h-screen items-center justify-center flex-col">
-        <p className="text-xl mb-4">
-          You need to be logged in to access this page
+      <div className="flex h-screen items-center justify-center flex-col p-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">Authentication Error</p>
+          <p>{authError}</p>
+        </div>
+        <div className="space-y-4">
+          <Button
+            onClick={() =>
+              (window.location.href =
+                "https://landing-page-woad-eta.vercel.app/login")
+            }
+          >
+            Return to Login
+          </Button>
+          <Button variant="outline" onClick={attemptManualLogin}>
+            Attempt Manual Login (Debug)
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col p-4">
+        <h1 className="text-2xl font-bold mb-4">Authentication Required</h1>
+        <p className="mb-6 text-center">
+          You need to be logged in to access the admin dashboard
         </p>
-        <Button
-          onClick={() =>
-            (window.location.href =
-              "https://landing-page-woad-eta.vercel.app/login")
-          }
-        >
-          Go to Login
-        </Button>
+        <div className="space-y-4">
+          <Button
+            onClick={() =>
+              (window.location.href =
+                "https://landing-page-woad-eta.vercel.app/login")
+            }
+          >
+            Go to Login
+          </Button>
+          <Button variant="outline" onClick={attemptManualLogin}>
+            Attempt Manual Login (Debug)
+          </Button>
+          <div className="p-4 bg-gray-100 rounded-md mt-4">
+            <p className="text-sm font-medium mb-2">Debug Information:</p>
+            <p className="text-xs">
+              Local Storage Keys: {Object.keys(localStorage).join(", ")}
+            </p>
+            <p className="text-xs mt-1">
+              Firebase Token Present:{" "}
+              {localStorage.getItem("firebase_token") ? "Yes" : "No"}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
