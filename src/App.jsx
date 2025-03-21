@@ -1,3 +1,4 @@
+// In App.jsx of your admin dashboard
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +11,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "./lib/utils";
 
-// Initialize Firebase (make sure to import your firebase config)
+// Initialize Firebase
 import { app } from "./firebase/firebaseConfig";
 const auth = getAuth(app);
 const firestore = getFirestore(app);
@@ -22,6 +23,7 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -56,36 +58,60 @@ const App = () => {
 
   // Handle user authentication state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
+    console.log("Checking authentication state...");
 
-      if (currentUser) {
-        setUser(currentUser);
+    // Add a delay to ensure Firebase has time to initialize
+    const timeoutId = setTimeout(() => {
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        console.log(
+          "Auth state changed:",
+          currentUser ? "User logged in" : "No user"
+        );
+        setLoading(true);
 
-        // Fetch user data from Firestore
-        try {
-          const userDocRef = doc(firestore, "users", currentUser.uid);
-          const userDoc = await getDoc(userDocRef);
+        if (currentUser) {
+          setUser(currentUser);
 
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          } else {
-            console.log("No user data found in Firestore");
-            // If no user data is found, redirect to landing page
-            window.location.href = "https://landing-page-woad-eta.vercel.app/";
+          // Fetch user data from Firestore
+          try {
+            const userDocRef = doc(firestore, "users", currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+              setUserData(userDoc.data());
+            } else {
+              console.log("No user data found in Firestore");
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+
+          setLoading(false);
+        } else {
+          // Only redirect if we've explicitly checked auth and no user is found
+          setAuthChecked(true);
+          setUser(null);
+          setUserData(null);
+          setLoading(false);
+
+          // Add a small delay before redirecting to prevent immediate redirect
+          setTimeout(() => {
+            if (!auth.currentUser) {
+              console.log("No user found, redirecting to landing page");
+              window.location.href =
+                "https://landing-page-woad-eta.vercel.app/login";
+            }
+          }, 1000);
         }
-      } else {
-        // User is not logged in, redirect to landing page
-        window.location.href = "https://landing-page-woad-eta.vercel.app/";
-      }
+      });
 
-      setLoading(false);
-    });
+      return () => {
+        unsubscribe(); // Clean up on unmount
+        clearTimeout(timeoutId);
+      };
+    }, 1000); // 1 second delay to ensure Firebase is initialized
 
-    return () => unsubscribe(); // Clean up on unmount
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Function to handle user logout
@@ -103,6 +129,26 @@ const App = () => {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <p className="ml-2">Loading authentication state...</p>
+      </div>
+    );
+  }
+
+  // If we've checked auth and there's no user, show a message instead of redirecting immediately
+  if (authChecked && !user) {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col">
+        <p className="text-xl mb-4">
+          You need to be logged in to access this page
+        </p>
+        <Button
+          onClick={() =>
+            (window.location.href =
+              "https://landing-page-woad-eta.vercel.app/login")
+          }
+        >
+          Go to Login
+        </Button>
       </div>
     );
   }
