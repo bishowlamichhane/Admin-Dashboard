@@ -80,11 +80,31 @@ const App = () => {
           const newUrl = window.location.pathname;
           window.history.replaceState({}, document.title, newUrl);
 
-          // Store token in localStorage for debugging
+          // Store token in localStorage
           localStorage.setItem("firebase_token", token);
 
-          // We'll use this token in the next step
-          console.log("Token stored in localStorage");
+          // Use the token to sign in with Firebase
+          // This is the key part that was missing
+          const response = await fetch(
+            "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdToken",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                idToken: token,
+                returnSecureToken: true,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to verify token");
+          }
+
+          console.log("Successfully authenticated with token");
+          // The auth state listener will handle the rest
         } catch (error) {
           console.error("Error processing token:", error);
           setAuthError(error.message);
@@ -206,76 +226,6 @@ const App = () => {
       alert("No authentication token found");
     }
   };
-
-  // if (loading) {
-  //   return (
-  //     <div className="flex h-screen items-center justify-center flex-col">
-  //       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-  //       <p>Loading authentication state...</p>
-  //       <p className="text-sm text-muted-foreground mt-2">
-  //         This may take a moment
-  //       </p>
-  //     </div>
-  //   );
-  // }
-
-  // if (authError) {
-  //   return (
-  //     <div className="flex h-screen items-center justify-center flex-col p-4">
-  //       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-  //         <p className="font-bold">Authentication Error</p>
-  //         <p>{authError}</p>
-  //       </div>
-  //       <div className="space-y-4">
-  //         <Button
-  //           onClick={() =>
-  //             (window.location.href =
-  //               "https://landing-page-woad-eta.vercel.app/login")
-  //           }
-  //         >
-  //           Return to Login
-  //         </Button>
-  //         <Button variant="outline" onClick={attemptManualLogin}>
-  //           Attempt Manual Login (Debug)
-  //         </Button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // if (!user) {
-  //   return (
-  //     <div className="flex h-screen items-center justify-center flex-col p-4">
-  //       <h1 className="text-2xl font-bold mb-4">Authentication Required</h1>
-  //       <p className="mb-6 text-center">
-  //         You need to be logged in to access the admin dashboard
-  //       </p>
-  //       <div className="space-y-4">
-  //         <Button
-  //           onClick={() =>
-  //             (window.location.href =
-  //               "https://landing-page-woad-eta.vercel.app/login")
-  //           }
-  //         >
-  //           Go to Login
-  //         </Button>
-  //         <Button variant="outline" onClick={attemptManualLogin}>
-  //           Attempt Manual Login (Debug)
-  //         </Button>
-  //         <div className="p-4 bg-gray-100 rounded-md mt-4">
-  //           <p className="text-sm font-medium mb-2">Debug Information:</p>
-  //           <p className="text-xs">
-  //             Local Storage Keys: {Object.keys(localStorage).join(", ")}
-  //           </p>
-  //           <p className="text-xs mt-1">
-  //             Firebase Token Present:{" "}
-  //             {localStorage.getItem("firebase_token") ? "Yes" : "No"}
-  //           </p>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-950">
