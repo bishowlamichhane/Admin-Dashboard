@@ -1,6 +1,8 @@
 "use client";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
+
 import {
   Search,
   Bell,
@@ -273,17 +275,15 @@ const Dashboard = () => {
   // In a real app, you would use Redux to get this data
   const reduxProducts = useSelector((state) => state.items || []);
   const products = reduxProducts.length > 0 ? reduxProducts : sampleProducts;
+  const userData = useOutletContext();
 
   // Calculate statistics
   const totalProducts = products.length;
   const totalStock = products.reduce((sum, item) => sum + item.stock, 0);
 
   // Calculate order statistics
-  const totalOrders = sampleOrders.length;
-  const totalRevenue = sampleOrders.reduce(
-    (sum, order) => sum + order.totalAmount,
-    0
-  );
+  const totalOrders = userData?.company[0]?.analytics?.revenue || 0;
+  const totalRevenue = userData?.company[0]?.analytics?.revenue || 0;
   const deliveredOrders = sampleOrders.filter(
     (order) => order.status === "Delivered"
   ).length;
@@ -354,7 +354,7 @@ const Dashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${totalRevenue}</div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <ArrowUpRight className="h-3.5 w-3.5 mr-1 text-green-500" />
               <span className="text-green-500 font-medium">+12.5%</span>
@@ -403,7 +403,9 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,324</div>
+            <div className="text-2xl font-bold">
+              {userData?.company[0]?.customers?.length || 0}
+            </div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <ArrowDownRight className="h-3.5 w-3.5 mr-1 text-red-500" />
               <span className="text-red-500 font-medium">-2.1%</span>
