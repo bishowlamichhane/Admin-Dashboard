@@ -317,7 +317,7 @@ const App = () => {
               window.location.hostname === "localhost" ||
               window.location.hostname === "127.0.0.1";
             const loginUrl = isLocalhost
-              ? "http://localhost:5173/login"
+              ? "http://localhost:5173/"
               : "https://landing-page-woad-eta.vercel.app/";
             window.location.href = loginUrl;
           }}
@@ -342,7 +342,7 @@ const App = () => {
               window.location.hostname === "127.0.0.1";
             const loginUrl = isLocalhost
               ? "http://localhost:5173/login"
-              : "https://landing-page-woad-eta.vercel.app/login";
+              : "https://landing-page-woad-eta.vercel.app/";
             window.location.href = loginUrl;
           }}
         >
