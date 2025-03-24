@@ -392,10 +392,9 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                     "flex items-center gap-2 w-full text-sm text-[#f87171] hover:bg-[#252b43] hover:text-[#ef4444] transition-all",
                     isCollapsed ? "justify-center px-2" : ""
                   )}
-                  onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5" />
-                  {!isCollapsed && <span>Logout</span>}
+                  {!isCollapsed && <span onClick={handleLogout}>Logout</span>}
                 </Button>
               </div>
             </TooltipTrigger>
