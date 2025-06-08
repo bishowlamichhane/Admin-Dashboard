@@ -40,69 +40,50 @@ const noScrollbarStyles = `
   }
 `;
 
-const Sidebar = ({ userData, companyData, handleLogout }) => {
+const Sidebar = ({ userData, companyData, handleLogout, isSidebarOpen }) => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  // Check if mobile on mount and when window resizes
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768 && !isCollapsed) {
-        setIsCollapsed(true);
-      }
-    };
-
-    checkIfMobile();
-    window.addEventListener("resize", checkIfMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkIfMobile);
-    };
-  }, [isCollapsed]);
 
   // Navigation items with notification counts
   const navItems = [
     {
       title: "Dashboard",
       icon: LayoutDashboard,
-      to: "/",
+      to: "/dashboard",
     },
     {
       title: "Products",
       icon: Package,
-      to: "/products",
+      to: "/dashboard/products",
       count: 12,
     },
     {
       title: "Orders",
       icon: ShoppingCart,
-      to: "/orders",
+      to: "/dashboard/orders",
       count: 5,
     },
     {
       title: "Customers",
       icon: Users,
-      to: "/customers",
+      to: "/dashboard/customers",
     },
     {
       title: "Analytics",
       icon: BarChart3,
-      to: "/analytics",
+      to: "/dashboard/analytics",
     },
     {
       title: "Messages",
       icon: MessageSquare,
-      to: "/messages",
+      to: "/dashboard/messages",
       count: 3,
       alert: true,
     },
     {
       title: "Notifications",
       icon: Bell,
-      to: "/notifications",
+      to: "/dashboard/notifications",
       count: 8,
     },
   ];
@@ -112,12 +93,12 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
     {
       title: "Settings",
       icon: Settings,
-      to: "/settings",
+      to: "/dashboard/settings",
     },
     {
       title: "Help & Support",
       icon: HelpCircle,
-      to: "/support",
+      to: "/dashboard/support",
     },
   ];
 
@@ -145,18 +126,18 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
       <div
         className={cn(
           "fixed flex flex-col h-screen bg-[#1a1f36] transition-all duration-300 z-30 shadow-lg",
-          isCollapsed ? "w-[70px]" : "w-64"
+          !isSidebarOpen ? "w-[70px]" : "w-64"
         )}
       >
         {/* Logo and brand */}
         <div
           className={cn(
             "flex h-16 items-center px-4 border-b border-[#2e3650]",
-            isCollapsed ? "justify-center" : "justify-between"
+            !isSidebarOpen ? "justify-center" : "justify-between"
           )}
         >
-          {!isCollapsed && (
-            <Link to="/" className="flex items-center gap-2">
+          {isSidebarOpen && (
+            <Link to="/dashboard" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#4f46e5]">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
@@ -165,8 +146,8 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
               </span>
             </Link>
           )}
-          {isCollapsed && (
-            <Link to="/">
+          {!isSidebarOpen && (
+            <Link to="/dashboard">
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#4f46e5]">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
@@ -175,7 +156,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
         </div>
 
         {/* Search bar */}
-        {!isCollapsed && (
+        {isSidebarOpen && (
           <div className="px-4 py-3">
             <div
               className={cn(
@@ -199,7 +180,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <div className="py-2">
             <div className="px-3 py-2">
-              {!isCollapsed && (
+              {isSidebarOpen && (
                 <h3 className="mb-2 text-xs font-medium text-[#94a3b8] uppercase tracking-wider">
                   Main Menu
                 </h3>
@@ -220,7 +201,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                               active
                                 ? "bg-[#252b43] text-white"
                                 : "text-[#cbd5e1] hover:bg-[#252b43] hover:text-white",
-                              isCollapsed ? "justify-center px-2" : ""
+                              !isSidebarOpen ? "justify-center px-2" : ""
                             )}
                           >
                             <Icon
@@ -231,7 +212,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                                   : "text-[#94a3b8] group-hover:text-[#4f46e5]"
                               )}
                             />
-                            {!isCollapsed && (
+                            {isSidebarOpen && (
                               <>
                                 <span>{item.title}</span>
                                 {item.count && (
@@ -247,7 +228,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                                 )}
                               </>
                             )}
-                            {isCollapsed && item.count && (
+                            {!isSidebarOpen && item.count && (
                               <Badge
                                 variant="outline"
                                 className="absolute -top-1 -right-1 bg-[#252b43] text-[#4f46e5] border-[#4f46e5]/50 px-1.5 h-4 min-w-4 flex items-center justify-center"
@@ -255,16 +236,16 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                                 {item.count}
                               </Badge>
                             )}
-                            {isCollapsed && item.alert && !item.count && (
+                            {!isSidebarOpen && item.alert && !item.count && (
                               <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-[#4f46e5]"></span>
                             )}
                           </Link>
                         </div>
                       </TooltipTrigger>
-                      {isCollapsed && (
+                      {!isSidebarOpen && (
                         <TooltipContent
                           side="right"
-                          className="bg-[#252b43] border-[#2e3650] text-white"
+                          className="bg-[#252b43] text-white"
                         >
                           {item.title}
                         </TooltipContent>
@@ -275,16 +256,13 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
               </nav>
             </div>
 
-            <div className="my-4 h-[1px] bg-[#2e3650] mx-3"></div>
-
-            {/* Support section */}
-            <div className="px-3 py-2">
-              {!isCollapsed && (
-                <h3 className="mb-2 text-xs font-medium text-[#94a3b8] uppercase tracking-wider">
+            <div className="py-2">
+              {isSidebarOpen && (
+                <h3 className="mb-2 px-3 text-xs font-medium text-[#94a3b8] uppercase tracking-wider">
                   Support
                 </h3>
               )}
-              <div className="space-y-1">
+              <nav className="space-y-1">
                 {supportItems.map((item, index) => {
                   const Icon = item.icon;
                   const active = isActive(item.to);
@@ -300,7 +278,7 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                               active
                                 ? "bg-[#252b43] text-white"
                                 : "text-[#cbd5e1] hover:bg-[#252b43] hover:text-white",
-                              isCollapsed ? "justify-center px-2" : ""
+                              !isSidebarOpen ? "justify-center px-2" : ""
                             )}
                           >
                             <Icon
@@ -311,14 +289,14 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                                   : "text-[#94a3b8] group-hover:text-[#4f46e5]"
                               )}
                             />
-                            {!isCollapsed && <span>{item.title}</span>}
+                            {isSidebarOpen && <span>{item.title}</span>}
                           </Link>
                         </div>
                       </TooltipTrigger>
-                      {isCollapsed && (
+                      {!isSidebarOpen && (
                         <TooltipContent
                           side="right"
-                          className="bg-[#252b43] border-[#2e3650] text-white"
+                          className="bg-[#252b43] text-white"
                         >
                           {item.title}
                         </TooltipContent>
@@ -326,100 +304,45 @@ const Sidebar = ({ userData, companyData, handleLogout }) => {
                     </Tooltip>
                   );
                 })}
-              </div>
+              </nav>
             </div>
           </div>
         </div>
 
-        {/* User and logout section */}
-        <div className="mt-auto border-t border-[#2e3650] p-4">
-          {!isCollapsed ? (
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-9 w-9 border border-[#2e3650]">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+        {/* User profile section */}
+        <div className="mt-auto p-4 border-t border-[#2e3650]">
+          <div
+            className={cn(
+              "flex items-center gap-3",
+              !isSidebarOpen ? "justify-center" : ""
+            )}
+          >
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={userData?.photoURL} alt="User Avatar" />
+              <AvatarFallback>{getUserInitials()}</AvatarFallback>
+            </Avatar>
+            {isSidebarOpen && (
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium text-white truncate">
-                  {userData ? `${userData.fname} ${userData.lname}` : "User"}
+                  {userData?.fname} {userData?.lname}
                 </p>
                 <p className="text-xs text-[#94a3b8] truncate">
-                  {userData?.email || "user@example.com"}
+                  {userData?.email}
                 </p>
               </div>
+            )}
+            {isSidebarOpen && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-[#94a3b8] hover:bg-[#252b43] hover:text-white md:hidden"
+                className="h-8 w-8 text-[#94a3b8] hover:bg-[#252b43] hover:text-white"
+                onClick={handleLogout}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <LogOut className="h-5 w-5" />
               </Button>
-            </div>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex justify-center mb-3">
-                  <Avatar className="h-9 w-9 border border-[#2e3650]">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback className="bg-[#252b43] text-[#4f46e5]">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-[#252b43] border-[#2e3650] text-white"
-              >
-                {userData ? `${userData.fname} ${userData.lname}` : "User"}
-                <br />
-                <span className="text-xs text-[#94a3b8]">
-                  {userData?.email || "user@example.com"}
-                </span>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="relative group">
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "flex items-center gap-2 w-full text-sm text-[#f87171] hover:bg-[#252b43] hover:text-[#ef4444] transition-all",
-                    isCollapsed ? "justify-center px-2" : ""
-                  )}
-                >
-                  <LogOut className="h-5 w-5" />
-                  {!isCollapsed && <span onClick={handleLogout}>Logout</span>}
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent
-                side="right"
-                className="bg-[#252b43] border-[#2e3650] text-white"
-              >
-                Logout
-              </TooltipContent>
             )}
-          </Tooltip>
+          </div>
         </div>
-
-        {/* Collapse button for desktop - only visible when sidebar is collapsed */}
-        {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -right-3 top-20 h-6 w-6 rounded-full bg-[#1a1f36] border border-[#2e3650] text-[#94a3b8] hover:text-white hidden md:flex"
-          >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
-        )}
       </div>
     </TooltipProvider>
   );

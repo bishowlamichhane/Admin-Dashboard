@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Search,
@@ -370,203 +370,192 @@ const ProductStatCard = ({ title, value, icon, description, color }) => {
 };
 
 const Products = () => {
-  // Use sample products if Redux store is empty
-  const reduxItems = useSelector((state) => state.items || []);
-  const [items, setItems] = useState([]);
   const dispatch = useDispatch();
-  const [isEdit, setisEdit] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+
+  // State for products, search, filters, and modals
+  const products = useSelector((state) => state.items);
+  const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [stockFilter, setStockFilter] = useState("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState("all");
+  const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
+  const [isUploadProductsModalOpen, setIsUploadProductsModalOpen] =
+    useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState(new Set());
 
-  // Initialize with sample products if Redux store is empty
+  // Ref for the file input
+  const fileInputRef = useRef(null);
+
+  // Load sample products on mount
   useEffect(() => {
-    if (reduxItems.length === 0) {
-      setItems(sampleProducts);
-      dispatch(itemsAction.addItems(sampleProducts));
-    } else {
-      setItems(reduxItems);
-    }
-  }, [reduxItems, dispatch]);
+    dispatch(itemsAction.replaceItems(sampleProducts));
+  }, [dispatch]);
 
-  // Handle product deletion
-  const handleDeleteProduct = (id) => {
-    // Update local state to reflect the deletion
-    setItems(items.filter((item) => item.id !== id));
-  };
+  // Product data stats
+  const totalProducts = products.length;
+  const activeProducts = products.filter(
+    (product) => product.status === "Active"
+  ).length;
+  const outOfStockProducts = products.filter(
+    (product) => product.stock === 0
+  ).length;
+  const featuredProducts = products.filter(
+    (product) => product.featured
+  ).length;
 
-  // Filter items based on search query and filters
-  const filterItems = items.filter((item) => {
-    const matchesSearch = item.name
+  // Filtered and searched products
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name
       .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+      .includes(searchTerm.toLowerCase());
     const matchesCategory =
-      categoryFilter === "all" || item.category === categoryFilter;
-
-    if (stockFilter === "all") return matchesSearch && matchesCategory;
-    if (stockFilter === "in-stock")
-      return matchesSearch && matchesCategory && item.stock > 50;
-    if (stockFilter === "low-stock")
-      return (
-        matchesSearch && matchesCategory && item.stock > 0 && item.stock <= 50
-      );
-    if (stockFilter === "out-of-stock")
-      return matchesSearch && matchesCategory && item.stock <= 0;
-
-    return matchesSearch && matchesCategory;
+      categoryFilter === "all" || product.category === categoryFilter;
+    const matchesStockStatus =
+      stockStatusFilter === "all" || product.status === stockStatusFilter;
+    return matchesSearch && matchesCategory && matchesStockStatus;
   });
 
-  // State variables for form inputs
-  const [productName, setProductName] = useState("");
-  const [productCategory, setProductCategory] = useState("");
-  const [productQuantity, setProductQuantity] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [productImage, setProductImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [productFeatured, setProductFeatured] = useState(false);
+  // Handlers for product actions
+  const handleDeleteProduct = (id) => {
+    dispatch(itemsAction.deleteItem(id));
+    setSelectedProducts((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+  };
 
-  const editProduct = () => {
-    setisEdit(!isEdit);
+  const editProduct = (id, field, value) => {
+    dispatch(itemsAction.editItem({ id, field, value }));
   };
 
   const handleOnSubmit = (event) => {
     event.preventDefault();
-
-    const newProduct = {
-      id: items.length + 1,
-      name: productName,
-      price: productPrice,
-      image: imagePreview || "/placeholder.svg?height=100&width=100",
-      category: productCategory,
-      stock: Number.parseInt(productQuantity),
-      featured: productFeatured,
-      status:
-        Number.parseInt(productQuantity) > 50
-          ? "Active"
-          : Number.parseInt(productQuantity) > 0
-          ? "Low Stock"
-          : "Out of Stock",
-    };
-
-    // Create a new array with the new product
-    const updatedItems = [...items, newProduct];
-
-    // Dispatch action to add the new product
-    dispatch(itemsAction.addItems(updatedItems));
-    setItems(updatedItems);
-
-    // Reset form fields
-    setProductName("");
-    setProductCategory("");
-    setProductPrice("");
-    setProductQuantity("");
-    setProductImage(null);
-    setImagePreview(null);
-    setProductFeatured(false);
+    console.log("Form submitted");
+    // Handle form submission logic here
   };
 
-  // Calculate product statistics
-  const totalProducts = items.length;
-  const totalStock = items.reduce((sum, item) => sum + item.stock, 0);
-  const lowStockCount = items.filter(
-    (item) => item.stock > 0 && item.stock <= 50
-  ).length;
-  const outOfStockCount = items.filter((item) => item.stock <= 0).length;
-  const featuredCount = items.filter((item) => item.featured).length;
+  const handleBulkDelete = () => {
+    dispatch(itemsAction.bulkDeleteItems(Array.from(selectedProducts)));
+    setSelectedProducts(new Set());
+    setIsBulkDeleteModalOpen(false);
+  };
+
+  const handleProductSelect = (id) => {
+    setSelectedProducts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllProducts = (checked) => {
+    if (checked) {
+      const allProductIds = new Set(filteredProducts.map((p) => p.id));
+      setSelectedProducts(allProductIds);
+    } else {
+      setSelectedProducts(new Set());
+    }
+  };
+
+  const allProductsSelected =
+    selectedProducts.size === filteredProducts.length &&
+    filteredProducts.length > 0;
+
+  // Handle file upload for bulk products
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          // Assuming the JSON data is an array of products
+          dispatch(itemsAction.addBulkItems(data));
+          setIsUploadProductsModalOpen(false);
+          alert("Products uploaded successfully!");
+        } catch (error) {
+          console.error("Error parsing JSON file:", error);
+          alert("Failed to upload products. Invalid JSON format.");
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
 
   return (
-    <div className="p-4 md:p-6 min-h-screen max-w-[1200px] mx-auto">
-      <div className="flex flex-col space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            OpenShop Products
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your product inventory, add new products, and track stock
-            levels.
-          </p>
-        </div>
+    <div className="flex flex-col flex-1 p-4 bg-slate-100 dark:bg-slate-950">
+      <h2 className="text-2xl font-bold mb-4">Products</h2>
+      <p className="text-muted-foreground mb-6">
+        Manage your product inventory and offerings.
+      </p>
 
-        {/* Product Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ProductStatCard
-            title="Total Products"
-            value={totalProducts}
-            icon={<Package className="h-4 w-4 text-blue-600" />}
-            description="Products in your inventory"
-            color="bg-blue-100"
-          />
+      {/* Product Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <ProductStatCard
+          title="Total Products"
+          value={totalProducts}
+          icon={<Package />}
+          description="in your inventory"
+          color="text-blue-500"
+        />
+        <ProductStatCard
+          title="Active Products"
+          value={activeProducts}
+          icon={<Check />}
+          description="currently available"
+          color="text-green-500"
+        />
+        <ProductStatCard
+          title="Out of Stock"
+          value={outOfStockProducts}
+          icon={<Trash2 />}
+          description="items to reorder"
+          color="text-red-500"
+        />
+        <ProductStatCard
+          title="Featured Products"
+          value={featuredProducts}
+          icon={<Tag />}
+          description="highlighted for customers"
+          color="text-yellow-500"
+        />
+      </div>
 
-          <ProductStatCard
-            title="Total Stock"
-            value={totalStock}
-            icon={<Layers className="h-4 w-4 text-green-600" />}
-            description="Items available for sale"
-            color="bg-green-100"
-          />
-
-          <ProductStatCard
-            title="Low Stock Items"
-            value={lowStockCount}
-            icon={<Tag className="h-4 w-4 text-yellow-600" />}
-            description="Products with low inventory"
-            color="bg-yellow-100"
-          />
-
-          <ProductStatCard
-            title="Featured Products"
-            value={featuredCount}
-            icon={<DollarSign className="h-4 w-4 text-purple-600" />}
-            description="Products highlighted in store"
-            color="bg-purple-100"
-          />
-        </div>
-
-        {/* Header with search and edit button */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-1/3">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={isEdit ? "default" : "outline"}
-              onClick={editProduct}
-              className="shrink-0"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              {isEdit ? "Done Editing" : "Edit Products"}
-            </Button>
-            <Button className="shrink-0">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </div>
-        </div>
-
-        {/* Products Table */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <CardTitle>OpenShop Product Inventory</CardTitle>
-                <CardDescription>
-                  Showing {filterItems.length} of {items.length} products
-                </CardDescription>
+      {/* Product Management Section */}
+      <Card className="flex-1 flex flex-col">
+        <CardHeader>
+          <CardTitle>Product Overview</CardTitle>
+          <CardDescription>Manage your product listings.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col flex-1">
+          <Tabs defaultValue="all" className="flex flex-col flex-1">
+            <div className="flex items-center mb-4">
+              <div className="relative w-full max-w-sm items-center">
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Search products..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="absolute start-0 inset-y-0 flex items-center justify-center px-2">
+                  <Search className="size-4 text-muted-foreground" />
+                </span>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+
+              <div className="ml-auto flex items-center gap-2">
                 <Select
                   value={categoryFilter}
                   onValueChange={setCategoryFilter}
                 >
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by category" />
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by Category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
@@ -578,280 +567,286 @@ const Products = () => {
                   </SelectContent>
                 </Select>
 
-                <Select value={stockFilter} onValueChange={setStockFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by stock" />
+                <Select
+                  value={stockStatusFilter}
+                  onValueChange={setStockStatusFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by Stock Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Stock Levels</SelectItem>
-                    <SelectItem value="in-stock">In Stock</SelectItem>
-                    <SelectItem value="low-stock">Low Stock</SelectItem>
-                    <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {selectedProducts.size > 0 && (
+                  <AlertDialog
+                    open={isBulkDeleteModalOpen}
+                    onOpenChange={setIsBulkDeleteModalOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        Delete Selected ({selectedProducts.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete the selected products from your inventory.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDelete}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+
+                <AlertDialog
+                  open={isUploadProductsModalOpen}
+                  onOpenChange={setIsUploadProductsModalOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Upload className="mr-2 h-4 w-4" /> Upload Products
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Upload Products</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Upload a JSON file containing product data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <Input
+                        id="file"
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept=".json"
+                      />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => fileInputRef.current.click()}
+                      >
+                        Select File
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <Button
+                  size="sm"
+                  onClick={() => setIsNewProductModalOpen(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">
-                      <div className="flex items-center">
-                        ID
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Stock Status</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead className="w-[100px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterItems.length > 0 ? (
-                    filterItems.map((item) => (
+
+            <TabsList className="grid w-full grid-cols-2 lg:w-fit">
+              <TabsTrigger value="all">All Products</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="flex flex-col flex-1">
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px] text-center">
+                        <Input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={allProductsSelected}
+                          onChange={(e) =>
+                            handleSelectAllProducts(e.target.checked)
+                          }
+                        />
+                      </TableHead>
+                      <TableHead className="w-[100px]">Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-center">Stock</TableHead>
+                      <TableHead className="text-center">Featured</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Sales</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
                       <ProductItems
-                        item={item}
-                        key={item.id}
-                        isEdit={isEdit}
-                        setisEdit={setisEdit}
+                        key={product.id}
+                        item={product}
+                        isEdit={false}
+                        setisEdit={() => {}}
                         editProduct={editProduct}
                         onDelete={handleDeleteProduct}
+                        onSelect={handleProductSelect}
+                        isSelected={selectedProducts.has(product.id)}
                       />
-                    ))
-                  ) : (
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+            <TabsContent value="active" className="flex flex-col flex-1">
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center py-6 text-muted-foreground"
-                      >
-                        No products found. Add a new product below.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Add New Product Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <PlusCircle className="h-5 w-5 mr-2" />
-              Add New OpenShop Product
-            </CardTitle>
-            <CardDescription>
-              Fill in the details below to add a new product to your inventory
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="mb-4 flex flex-wrap">
-                <TabsTrigger value="basic">Basic Information</TabsTrigger>
-                <TabsTrigger value="media">Media & Visibility</TabsTrigger>
-                <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              </TabsList>
-
-              <form onSubmit={handleOnSubmit}>
-                <TabsContent value="basic" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="productName">Product Name</Label>
-                      <Input
-                        id="productName"
-                        type="text"
-                        placeholder="Enter product name"
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="productCategory">Product Category</Label>
-                      <Select
-                        value={productCategory}
-                        onValueChange={setProductCategory}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {openShopCategories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="productPrice">Product Price ($)</Label>
-                      <Input
-                        id="productPrice"
-                        type="text"
-                        placeholder="Enter product price"
-                        value={productPrice}
-                        onChange={(e) => setProductPrice(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="productQuantity">
-                        Initial Stock Quantity
-                      </Label>
-                      <Input
-                        id="productQuantity"
-                        type="number"
-                        placeholder="Enter product quantity"
-                        value={productQuantity}
-                        onChange={(e) => setProductQuantity(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="media" className="space-y-4">
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUpload">Product Image</Label>
-                      <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="relative w-32 h-32 rounded-md overflow-hidden border">
-                          <img
-                            src={
-                              imagePreview ||
-                              "/placeholder.svg?height=128&width=128" ||
-                              "/placeholder.svg"
-                            }
-                            alt="Product Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 w-full">
-                          <Label
-                            htmlFor="imageUpload"
-                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground">
-                                Click to upload or drag and drop
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                PNG, JPG or WEBP (max. 2MB)
-                              </p>
-                            </div>
-                            <Input
-                              id="imageUpload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                  setProductImage(file);
-                                  const reader = new FileReader();
-                                  reader.onload = () => {
-                                    setImagePreview(reader.result);
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="featured">Featured Product</Label>
-                        <Switch
-                          id="featured"
-                          checked={productFeatured}
-                          onCheckedChange={setProductFeatured}
+                      <TableHead className="w-[50px] text-center">
+                        <Input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={allProductsSelected}
+                          onChange={(e) =>
+                            handleSelectAllProducts(e.target.checked)
+                          }
                         />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Featured products are displayed prominently in the
-                        OpenShop storefront
-                      </p>
-                    </div>
-                  </div>
-                </TabsContent>
+                      </TableHead>
+                      <TableHead className="w-[100px]">Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-center">Stock</TableHead>
+                      <TableHead className="text-center">Featured</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Sales</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts
+                      .filter((product) => product.status === "Active")
+                      .map((product) => (
+                        <ProductItems
+                          key={product.id}
+                          item={product}
+                          isEdit={false}
+                          setisEdit={() => {}}
+                          editProduct={editProduct}
+                          onDelete={handleDeleteProduct}
+                          onSelect={handleProductSelect}
+                          isSelected={selectedProducts.has(product.id)}
+                        />
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
-                <TabsContent value="inventory" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
-                      <Input
-                        id="sku"
-                        type="text"
-                        placeholder="Enter product SKU"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="barcode">
-                        Barcode (ISBN, UPC, GTIN, etc.)
-                      </Label>
-                      <Input
-                        id="barcode"
-                        type="text"
-                        placeholder="Enter product barcode"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="trackInventory">Track Inventory</Label>
-                        <Switch id="trackInventory" defaultChecked={true} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Enable inventory tracking for this product
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="allowBackorders">
-                          Allow Backorders
-                        </Label>
-                        <Switch id="allowBackorders" defaultChecked={false} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Allow customers to purchase this product when out of
-                        stock
-                      </p>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <div className="mt-6 flex justify-end gap-2">
-                  <Button variant="outline" type="button">
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                </div>
-              </form>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+      {/* New Product Modal */}
+      <AlertDialog
+        open={isNewProductModalOpen}
+        onOpenChange={setIsNewProductModalOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add New Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Fill in the details for your new product.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form onSubmit={handleOnSubmit} className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                defaultValue="Product Name"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="price" className="text-right">
+                Price
+              </Label>
+              <Input
+                id="price"
+                defaultValue="99.99"
+                type="number"
+                step="0.01"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">
+                Category
+              </Label>
+              <Select defaultValue="Electronics">
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {openShopCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="stock" className="text-right">
+                Stock
+              </Label>
+              <Input
+                id="stock"
+                defaultValue="100"
+                type="number"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="featured" className="text-right">
+                Featured
+              </Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <Switch id="featured" />
+                <Label htmlFor="featured">Mark as featured product</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Status
+              </Label>
+              <Select defaultValue="Active">
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Low Stock">Low Stock</SelectItem>
+                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction type="submit" onClick={handleOnSubmit}>
+              Add Product
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
