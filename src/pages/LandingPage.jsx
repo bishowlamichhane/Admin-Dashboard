@@ -365,13 +365,15 @@ const LandingPage = () => {
               <X className="h-6 w-6" />
             </button>
             <div className="aspect-video bg-black">
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                title="Open Shop Demo"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+              <video
+                className="w-full h-full object-cover"
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
+                src="/images/demo.mp4"
+              />
             </div>
           </div>
         </div>
