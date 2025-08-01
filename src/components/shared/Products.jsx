@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+import { useAuth } from "../../contexts/authContext";
+import { itemsAction } from "../../store/itemsSlice";
 import {
   Search,
   PlusCircle,
@@ -17,7 +21,6 @@ import {
   Layers,
   DollarSign,
 } from "lucide-react";
-import { itemsAction } from "../../store/itemsSlice";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,8 +250,8 @@ const ProductItems = ({ item, isEdit, setisEdit, editProduct, onDelete }) => {
             alt={item.name}
             className="h-12 w-12 object-cover rounded-md border"
           />
-          <div>
-            <p className="font-medium">{item.name}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate max-w-[200px]">{item.name}</p>
             {item.featured && (
               <Badge
                 variant="outline"
@@ -260,7 +263,8 @@ const ProductItems = ({ item, isEdit, setisEdit, editProduct, onDelete }) => {
           </div>
         </div>
       </TableCell>
-      <TableCell>{item.category}</TableCell>
+      <TableCell>{item.name}</TableCell>
+      <TableCell>{item.company}</TableCell>
       <TableCell>
         <div
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${stockStatus.color}`}
@@ -269,7 +273,7 @@ const ProductItems = ({ item, isEdit, setisEdit, editProduct, onDelete }) => {
           <span className="ml-1.5 text-xs font-normal">({item.stock})</span>
         </div>
       </TableCell>
-      <TableCell className="font-medium">${item.price}</TableCell>
+      <TableCell className="font-medium">Rs {item.price}</TableCell>
       <TableCell>
         {isEdit ? (
           <div className="flex justify-end space-x-2">
@@ -371,6 +375,7 @@ const ProductStatCard = ({ title, value, icon, description, color }) => {
 
 const Products = () => {
   const dispatch = useDispatch();
+  const { currentUser } = useAuth();
 
   // State for products, search, filters, and modals
   const products = useSelector((state) => state.items);
@@ -382,14 +387,99 @@ const Products = () => {
     useState(false);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [newProductData, setNewProductData] = useState({
+    name: "",
+    price: "",
+    category: "Electronics",
+    stock: "",
+    featured: false,
+    status: "Active",
+    sales: 0,
+    image: "", // Placeholder for image URL
+  });
 
   // Ref for the file input
   const fileInputRef = useRef(null);
 
-  // Load sample products on mount
+  // Fetch products from Firestore
   useEffect(() => {
-    dispatch(itemsAction.replaceItems(sampleProducts));
-  }, [dispatch]);
+    const fetchProducts = async () => {
+      if (!currentUser?.uid) {
+        console.log("Products: currentUser.uid is not available.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Products: Fetching products for UID:", currentUser.uid);
+
+      try {
+        setLoading(true);
+        // First get the company document
+        const companyRef = collection(db, "users", currentUser.uid, "company");
+        const companySnapshot = await getDocs(companyRef);
+
+        if (!companySnapshot.empty) {
+          const companyDoc = companySnapshot.docs[0];
+          const companyId = companyDoc.id;
+          console.log("Products: Company ID found:", companyId);
+
+          // Then get the products collection
+          const productsPath = `users/${currentUser.uid}/company/${companyId}/products`;
+          console.log("Products: Fetching from path:", productsPath);
+          const productsRef = collection(
+            db,
+            "users",
+            currentUser.uid,
+            "company",
+            companyId,
+            "products"
+          );
+          const productsSnapshot = await getDocs(productsRef);
+          console.log("Products: Found", productsSnapshot.size, "products.");
+
+          // Transform Firestore data to match our product structure
+          const productsData = productsSnapshot.docs.map((doc, index) => ({
+            id: index + 1,
+            name: doc.data().item_name || "N/A", // Map item_name to name
+            price: doc.data().current_price || 0, // Map current_price to price
+            image: doc.data().image
+              ? `/${doc.data().image}`
+              : "/placeholder.svg", // Prepend / to image path
+            category: doc.data().category || "Uncategorized", // Map original category field
+            company: doc.data().company || "N/A", // Ensure company field is mapped separately
+            stock: doc.data().stock || 0,
+            featured: doc.data().featured || false,
+            status: doc.data().status || "Active",
+            sales: doc.data().sales || 0,
+            // Include other fields from Firestore if needed
+            original_price: doc.data().original_price || 0,
+            delivery_date: doc.data().delivery_date || "N/A",
+            discount_percentage: doc.data().discount_percentage || 0,
+            rating: doc.data().rating || { count: 0, stars: 0 },
+            return_period: doc.data().return_period || 0,
+          }));
+          console.log("Products: Transformed data:", productsData);
+
+          // Update Redux store with fetched products
+          dispatch(itemsAction.replaceItems(productsData));
+        } else {
+          console.log(
+            "Products: No company document found for UID:",
+            currentUser.uid
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        // If there's an error, use sample products as fallback
+        dispatch(itemsAction.replaceItems(sampleProducts));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [currentUser, dispatch]);
 
   // Product data stats
   const totalProducts = products.length;
@@ -405,9 +495,11 @@ const Products = () => {
 
   // Filtered and searched products
   const filteredProducts = products.filter((product) => {
+    if (!product) return false;
+
     const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+      ? product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      : false;
     const matchesCategory =
       categoryFilter === "all" || product.category === categoryFilter;
     const matchesStockStatus =
@@ -429,10 +521,82 @@ const Products = () => {
     dispatch(itemsAction.editItem({ id, field, value }));
   };
 
-  const handleOnSubmit = (event) => {
+  const handleOnSubmit = async (event) => {
     event.preventDefault();
     console.log("Form submitted");
-    // Handle form submission logic here
+
+    if (!currentUser?.uid) {
+      alert("User not authenticated.");
+      return;
+    }
+
+    setLoading(true);
+    let imageUrl = newProductData.image;
+
+    try {
+      const companyRef = collection(db, "users", currentUser.uid, "company");
+      const companySnapshot = await getDocs(companyRef);
+
+      if (!companySnapshot.empty) {
+        const companyDoc = companySnapshot.docs[0];
+        const companyId = companyDoc.id;
+
+        const productsCollectionRef = collection(
+          db,
+          "users",
+          currentUser.uid,
+          "company",
+          companyId,
+          "products"
+        );
+
+        await addDoc(productsCollectionRef, {
+          item_name: newProductData.name,
+          current_price: parseFloat(newProductData.price),
+          category: newProductData.category,
+          stock: parseInt(newProductData.stock),
+          featured: newProductData.featured,
+          status: newProductData.status,
+          sales: newProductData.sales,
+          image: imageUrl,
+          company: companyDoc.data().name || "N/A",
+          original_price: parseFloat(
+            newProductData.original_price || newProductData.price
+          ),
+          delivery_date: newProductData.delivery_date || "N/A",
+          discount_percentage: newProductData.discount_percentage || 0,
+          rating: newProductData.rating || { count: 0, stars: 0 },
+          return_period: newProductData.return_period || 0,
+        });
+
+        alert("Product added successfully!");
+        setIsNewProductModalOpen(false);
+        fetchProducts(); // Call fetchProducts to refresh the list
+      }
+    } catch (error) {
+      console.error("Error adding product:", error);
+      alert("Failed to add product.");
+    } finally {
+      setLoading(false);
+      setNewProductData({
+        name: "",
+        price: "",
+        category: "Electronics",
+        stock: "",
+        featured: false,
+        status: "Active",
+        sales: 0,
+        image: "",
+      });
+    }
+  };
+
+  const handleNewProductChange = (e) => {
+    const { id, value, type, checked } = e.target;
+    setNewProductData((prev) => ({
+      ...prev,
+      [id]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleBulkDelete = () => {
@@ -494,359 +658,422 @@ const Products = () => {
         Manage your product inventory and offerings.
       </p>
 
-      {/* Product Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <ProductStatCard
-          title="Total Products"
-          value={totalProducts}
-          icon={<Package />}
-          description="in your inventory"
-          color="text-blue-500"
-        />
-        <ProductStatCard
-          title="Active Products"
-          value={activeProducts}
-          icon={<Check />}
-          description="currently available"
-          color="text-green-500"
-        />
-        <ProductStatCard
-          title="Out of Stock"
-          value={outOfStockProducts}
-          icon={<Trash2 />}
-          description="items to reorder"
-          color="text-red-500"
-        />
-        <ProductStatCard
-          title="Featured Products"
-          value={featuredProducts}
-          icon={<Tag />}
-          description="highlighted for customers"
-          color="text-yellow-500"
-        />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <p>Loading products...</p>
+        </div>
+      ) : (
+        <>
+          {/* Product Stats */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <ProductStatCard
+              title="Total Products"
+              value={totalProducts}
+              icon={<Package />}
+              description="in your inventory"
+              color="text-blue-500"
+            />
+            <ProductStatCard
+              title="Active Products"
+              value={activeProducts}
+              icon={<Check />}
+              description="currently available"
+              color="text-green-500"
+            />
+            <ProductStatCard
+              title="Out of Stock"
+              value={outOfStockProducts}
+              icon={<Trash2 />}
+              description="items to reorder"
+              color="text-red-500"
+            />
+            <ProductStatCard
+              title="Featured Products"
+              value={featuredProducts}
+              icon={<Tag />}
+              description="highlighted for customers"
+              color="text-yellow-500"
+            />
+          </div>
 
-      {/* Product Management Section */}
-      <Card className="flex-1 flex flex-col">
-        <CardHeader>
-          <CardTitle>Product Overview</CardTitle>
-          <CardDescription>Manage your product listings.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col flex-1">
-          <Tabs defaultValue="all" className="flex flex-col flex-1">
-            <div className="flex items-center mb-4">
-              <div className="relative w-full max-w-sm items-center">
-                <Input
-                  id="search"
-                  type="text"
-                  placeholder="Search products..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <span className="absolute start-0 inset-y-0 flex items-center justify-center px-2">
-                  <Search className="size-4 text-muted-foreground" />
-                </span>
-              </div>
+          {/* Product Management Section */}
+          <Card className="flex-1 flex flex-col">
+            <CardHeader>
+              <CardTitle>Product Overview</CardTitle>
+              <CardDescription>Manage your product listings.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col flex-1">
+              <Tabs defaultValue="all" className="flex flex-col flex-1">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4 gap-4">
+                  <div className="relative w-full max-w-sm items-center">
+                    <Input
+                      id="search"
+                      type="text"
+                      placeholder="Search products..."
+                      className="pl-10"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <span className="absolute start-0 inset-y-0 flex items-center justify-center px-2">
+                      <Search className="size-4 text-muted-foreground" />
+                    </span>
+                  </div>
 
-              <div className="ml-auto flex items-center gap-2">
-                <Select
-                  value={categoryFilter}
-                  onValueChange={setCategoryFilter}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {openShopCategories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
+                    <Select
+                      value={categoryFilter}
+                      onValueChange={setCategoryFilter}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {openShopCategories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                <Select
-                  value={stockStatusFilter}
-                  onValueChange={setStockStatusFilter}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by Stock Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Low Stock">Low Stock</SelectItem>
-                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
+                    <Select
+                      value={stockStatusFilter}
+                      onValueChange={setStockStatusFilter}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by Stock Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Low Stock">Low Stock</SelectItem>
+                        <SelectItem value="Out of Stock">
+                          Out of Stock
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                {selectedProducts.size > 0 && (
-                  <AlertDialog
-                    open={isBulkDeleteModalOpen}
-                    onOpenChange={setIsBulkDeleteModalOpen}
-                  >
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        Delete Selected ({selectedProducts.size})
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently
-                          delete the selected products from your inventory.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBulkDelete}>
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-
-                <AlertDialog
-                  open={isUploadProductsModalOpen}
-                  onOpenChange={setIsUploadProductsModalOpen}
-                >
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Upload className="mr-2 h-4 w-4" /> Upload Products
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Upload Products</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Upload a JSON file containing product data.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <Input
-                        id="file"
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileUpload}
-                        accept=".json"
-                      />
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => fileInputRef.current.click()}
+                    {selectedProducts.size > 0 && (
+                      <AlertDialog
+                        open={isBulkDeleteModalOpen}
+                        onOpenChange={setIsBulkDeleteModalOpen}
                       >
-                        Select File
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                          >
+                            Delete Selected ({selectedProducts.size})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will
+                              permanently delete the selected products from your
+                              inventory.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBulkDelete}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
 
-                <Button
-                  size="sm"
-                  onClick={() => setIsNewProductModalOpen(true)}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-                </Button>
-              </div>
-            </div>
+                    <AlertDialog
+                      open={isUploadProductsModalOpen}
+                      onOpenChange={setIsUploadProductsModalOpen}
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          <Upload className="mr-2 h-4 w-4" /> Upload Products
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Upload Products</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Upload a JSON file containing product data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <Input
+                            id="file"
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            accept=".json"
+                          />
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => fileInputRef.current.click()}
+                          >
+                            Upload
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
 
-            <TabsList className="grid w-full grid-cols-2 lg:w-fit">
-              <TabsTrigger value="all">All Products</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="flex flex-col flex-1">
-              <div className="overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px] text-center">
-                        <Input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={allProductsSelected}
-                          onChange={(e) =>
-                            handleSelectAllProducts(e.target.checked)
-                          }
-                        />
-                      </TableHead>
-                      <TableHead className="w-[100px]">Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-center">Stock</TableHead>
-                      <TableHead className="text-center">Featured</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center">Sales</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <ProductItems
-                        key={product.id}
-                        item={product}
-                        isEdit={false}
-                        setisEdit={() => {}}
-                        editProduct={editProduct}
-                        onDelete={handleDeleteProduct}
-                        onSelect={handleProductSelect}
-                        isSelected={selectedProducts.has(product.id)}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-            <TabsContent value="active" className="flex flex-col flex-1">
-              <div className="overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px] text-center">
-                        <Input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={allProductsSelected}
-                          onChange={(e) =>
-                            handleSelectAllProducts(e.target.checked)
-                          }
-                        />
-                      </TableHead>
-                      <TableHead className="w-[100px]">Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-center">Stock</TableHead>
-                      <TableHead className="text-center">Featured</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center">Sales</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts
-                      .filter((product) => product.status === "Active")
-                      .map((product) => (
-                        <ProductItems
-                          key={product.id}
-                          item={product}
-                          isEdit={false}
-                          setisEdit={() => {}}
-                          editProduct={editProduct}
-                          onDelete={handleDeleteProduct}
-                          onSelect={handleProductSelect}
-                          isSelected={selectedProducts.has(product.id)}
-                        />
+                    <Button
+                      size="sm"
+                      onClick={() => setIsNewProductModalOpen(true)}
+                      className="w-full sm:w-auto"
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                    </Button>
+                  </div>
+                </div>
+
+                <TabsList className="grid w-full grid-cols-2 lg:w-fit">
+                  <TabsTrigger value="all">All Products</TabsTrigger>
+                  <TabsTrigger value="active">Active</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="flex flex-col flex-1">
+                  <div className="overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px] text-center">
+                            <Input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={allProductsSelected}
+                              onChange={(e) =>
+                                handleSelectAllProducts(e.target.checked)
+                              }
+                            />
+                          </TableHead>
+                          <TableHead className="w-[100px]">Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-center">Stock</TableHead>
+                          <TableHead className="text-center">
+                            Featured
+                          </TableHead>
+                          <TableHead className="text-center">Status</TableHead>
+                          <TableHead className="text-center">Sales</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.map((product) => (
+                          <ProductItems
+                            key={product.id}
+                            item={product}
+                            isEdit={false}
+                            setisEdit={() => {}}
+                            editProduct={editProduct}
+                            onDelete={handleDeleteProduct}
+                            onSelect={handleProductSelect}
+                            isSelected={selectedProducts.has(product.id)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+                <TabsContent value="active" className="flex flex-col flex-1">
+                  <div className="overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px] text-center">
+                            <Input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={allProductsSelected}
+                              onChange={(e) =>
+                                handleSelectAllProducts(e.target.checked)
+                              }
+                            />
+                          </TableHead>
+                          <TableHead className="w-[100px]">Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-center">Stock</TableHead>
+                          <TableHead className="text-center">
+                            Featured
+                          </TableHead>
+                          <TableHead className="text-center">Status</TableHead>
+                          <TableHead className="text-center">Sales</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts
+                          .filter((product) => product.status === "Active")
+                          .map((product) => (
+                            <ProductItems
+                              key={product.id}
+                              item={product}
+                              isEdit={false}
+                              setisEdit={() => {}}
+                              editProduct={editProduct}
+                              onDelete={handleDeleteProduct}
+                              onSelect={handleProductSelect}
+                              isSelected={selectedProducts.has(product.id)}
+                            />
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* New Product Modal */}
+          <AlertDialog
+            open={isNewProductModalOpen}
+            onOpenChange={setIsNewProductModalOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Add New Product</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Fill in the details for your new product.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <form onSubmit={handleOnSubmit} className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    defaultValue="Product Name"
+                    className="col-span-3"
+                    value={newProductData.name}
+                    onChange={handleNewProductChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="price" className="text-right">
+                    Price
+                  </Label>
+                  <Input
+                    id="price"
+                    defaultValue="99.99"
+                    type="number"
+                    step="0.01"
+                    className="col-span-3"
+                    value={newProductData.price}
+                    onChange={handleNewProductChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="image" className="text-right">
+                    Image URL
+                  </Label>
+                  <Input
+                    id="image"
+                    defaultValue="/images/product.png"
+                    className="col-span-3"
+                    value={newProductData.image}
+                    onChange={handleNewProductChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="category" className="text-right">
+                    Category
+                  </Label>
+                  <Select
+                    value={newProductData.category}
+                    onValueChange={(value) =>
+                      setNewProductData({ ...newProductData, category: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {openShopCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
                       ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* New Product Modal */}
-      <AlertDialog
-        open={isNewProductModalOpen}
-        onOpenChange={setIsNewProductModalOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add New Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Fill in the details for your new product.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <form onSubmit={handleOnSubmit} className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                defaultValue="Product Name"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price
-              </Label>
-              <Input
-                id="price"
-                defaultValue="99.99"
-                type="number"
-                step="0.01"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="category" className="text-right">
-                Category
-              </Label>
-              <Select defaultValue="Electronics">
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {openShopCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="stock" className="text-right">
-                Stock
-              </Label>
-              <Input
-                id="stock"
-                defaultValue="100"
-                type="number"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="featured" className="text-right">
-                Featured
-              </Label>
-              <div className="col-span-3 flex items-center space-x-2">
-                <Switch id="featured" />
-                <Label htmlFor="featured">Mark as featured product</Label>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Status
-              </Label>
-              <Select defaultValue="Active">
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Low Stock">Low Stock</SelectItem>
-                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </form>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction type="submit" onClick={handleOnSubmit}>
-              Add Product
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="stock" className="text-right">
+                    Stock
+                  </Label>
+                  <Input
+                    id="stock"
+                    defaultValue="100"
+                    type="number"
+                    className="col-span-3"
+                    value={newProductData.stock}
+                    onChange={handleNewProductChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="featured" className="text-right">
+                    Featured
+                  </Label>
+                  <div className="col-span-3 flex items-center space-x-2">
+                    <Switch
+                      id="featured"
+                      checked={newProductData.featured}
+                      onCheckedChange={(checked) =>
+                        setNewProductData({
+                          ...newProductData,
+                          featured: checked,
+                        })
+                      }
+                    />
+                    <Label htmlFor="featured">Mark as featured product</Label>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="status" className="text-right">
+                    Status
+                  </Label>
+                  <Select
+                    value={newProductData.status}
+                    onValueChange={(value) =>
+                      setNewProductData({ ...newProductData, status: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Low Stock">Low Stock</SelectItem>
+                      <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </form>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction type="submit" onClick={handleOnSubmit}>
+                  Add Product
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 };

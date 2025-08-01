@@ -70,7 +70,7 @@ const subscriptionPlans = [
 ];
 
 const Signup = () => {
-  const currentUser = useAuth();
+  const {currentUser, loading} = useAuth();
   const navigate = useNavigate();
   const firestore = getFirestore(app);
 
@@ -174,7 +174,7 @@ const Signup = () => {
 
         // Create user document with basic info
         await setDoc(doc(firestore, "users", user.uid), {
-          role: "customer",
+          role: "owner",
           email: email,
           fname: fname,
           lname: lname,
@@ -241,19 +241,6 @@ const Signup = () => {
             price: 1,
           }
         );
-
-        // Get the ID token (no longer needed for direct client-side redirection)
-        // const idToken = await user.getIdToken();
-
-        // Determine if we're in development or production
-        // const isLocalhost =
-        //   window.location.hostname === "localhost" ||
-        //   window.location.hostname === "127.0.0.1";
-
-        // Set the appropriate redirect URL - using HTTP for localhost, not HTTPS
-        // const redirectUrl = isLocalhost
-        //   ? `http://localhost:5174/?token=${idToken}` // Note: HTTP not HTTPS
-        //   : `https://admin-dashboard-phi-amber.vercel.app/?token=${idToken}`;
 
         console.log("Redirecting to dashboard...");
 

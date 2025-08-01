@@ -1,6 +1,7 @@
 // firebaseConfig.js
 import { initializeApp } from "firebase/app"
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth"
+import { getFirestore } from "firebase/firestore"
 import { Import } from "lucide-react"
 
 const firebaseConfig = {
@@ -15,11 +16,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
-
+const db = getFirestore(app);
 // Explicitly set persistence to LOCAL to ensure it works across domains
 setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Firebase persistence error:", error)
 })
 
-export { app, auth }
+export { app, auth ,db}
 

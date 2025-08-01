@@ -1,7 +1,10 @@
 "use client";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { useOutletContext } from "react-router-dom";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+import { useEffect, useState } from "react";
+import { useAuth } from "../../contexts/authContext";
 
 import {
   Search,
@@ -272,18 +275,59 @@ const NetProfitChart = () => {
 };
 
 const Dashboard = () => {
-  // In a real app, you would use Redux to get this data
   const reduxProducts = useSelector((state) => state.items || []);
   const products = reduxProducts.length > 0 ? reduxProducts : sampleProducts;
-  const userData = useOutletContext();
+  const { currentUser } = useAuth();
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [companyData, setCompanyData] = useState(null);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [activeCustomers, setActiveCustomers] = useState(0);
+
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      if (!currentUser?.uid) return;
+
+      try {
+        const companyRef = collection(db, "users", currentUser.uid, "company");
+        const companySnapshot = await getDocs(companyRef);
+
+        if (!companySnapshot.empty) {
+          const companyDoc = companySnapshot.docs[0];
+          setCompanyData(companyDoc.data());
+
+          // Fetch products count
+          const productsRef = collection(
+            db,
+            "users",
+            currentUser.uid,
+            "company",
+            companyDoc.id,
+            "products"
+          );
+          const productsSnapshot = await getDocs(productsRef);
+          setTotalProducts(productsSnapshot.size);
+
+          // Set other company-related data
+          const data = companyDoc.data();
+          setTotalOrders(data.analytics?.revenue || 0);
+          setTotalRevenue(data.analytics?.revenue || 0);
+          setActiveCustomers(data.customers?.length || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching company data:", error);
+        setTotalProducts(0);
+        setTotalOrders(0);
+        setTotalRevenue(0);
+        setActiveCustomers(0);
+      }
+    };
+
+    fetchCompanyData();
+  }, [currentUser]);
 
   // Calculate statistics
-  const totalProducts = products.length;
   const totalStock = products.reduce((sum, item) => sum + item.stock, 0);
-
-  // Calculate order statistics
-  const totalOrders = userData?.company[0]?.analytics?.revenue || 0;
-  const totalRevenue = userData?.company[0]?.analytics?.revenue || 0;
   const deliveredOrders = sampleOrders.filter(
     (order) => order.status === "Delivered"
   ).length;
@@ -403,9 +447,7 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {userData?.company[0]?.customers?.length || 0}
-            </div>
+            <div className="text-2xl font-bold">{activeCustomers}</div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <ArrowDownRight className="h-3.5 w-3.5 mr-1 text-red-500" />
               <span className="text-red-500 font-medium">-2.1%</span>
