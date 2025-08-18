@@ -283,39 +283,93 @@ const Dashboard = () => {
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [activeCustomers, setActiveCustomers] = useState(0);
+  const [deliveredOrders, setDeliveredOrders] = useState(0);
+  const [processingOrders, setProcessingOrders] = useState(0);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [cancelledOrders, setCancelledOrders] = useState(0);
 
   useEffect(() => {
-    const fetchCompanyData = async () => {
-      if (!currentUser?.uid) return;
-
+    const fetchDashboardData = async () => {
       try {
-        const companyRef = collection(db, "users", currentUser.uid, "company");
-        const companySnapshot = await getDocs(companyRef);
+        // Fetch orders to calculate total revenue and total orders
+        const ordersRef = collection(db, "orders");
+        const ordersSnapshot = await getDocs(ordersRef);
+        
+        // Calculate total revenue from orderSummary.finalAmount
+        const totalRevenueFromOrders = ordersSnapshot.docs.reduce((sum, doc) => {
+          const orderData = doc.data();
+          return sum + (orderData.orderSummary?.finalAmount || 0);
+        }, 0);
+        
+        // Set total orders
+        setTotalOrders(ordersSnapshot.size);
+        // Set total revenue
+        setTotalRevenue(totalRevenueFromOrders);
 
-        if (!companySnapshot.empty) {
-          const companyDoc = companySnapshot.docs[0];
-          setCompanyData(companyDoc.data());
+        // Calculate order status counts
+        const orderStatusCounts = ordersSnapshot.docs.reduce((counts, doc) => {
+          const orderData = doc.data();
+          const status = orderData.status?.toLowerCase() || 'pending';
+          
+          switch (status) {
+            case 'delivered':
+              counts.delivered++;
+              break;
+            case 'processing':
+              counts.processing++;
+              break;
+            case 'pending':
+              counts.pending++;
+              break;
+            case 'cancelled':
+              counts.cancelled++;
+              break;
+            default:
+              counts.pending++;
+          }
+          return counts;
+        }, { delivered: 0, processing: 0, pending: 0, cancelled: 0 });
 
-          // Fetch products count
-          const productsRef = collection(
-            db,
-            "users",
-            currentUser.uid,
-            "company",
-            companyDoc.id,
-            "products"
-          );
-          const productsSnapshot = await getDocs(productsRef);
-          setTotalProducts(productsSnapshot.size);
+        setDeliveredOrders(orderStatusCounts.delivered);
+        setProcessingOrders(orderStatusCounts.processing);
+        setPendingOrders(orderStatusCounts.pending);
+        setCancelledOrders(orderStatusCounts.cancelled);
 
-          // Set other company-related data
-          const data = companyDoc.data();
-          setTotalOrders(data.analytics?.revenue || 0);
-          setTotalRevenue(data.analytics?.revenue || 0);
-          setActiveCustomers(data.customers?.length || 0);
+        // Fetch users with role = "customer" to get active customers count
+        const usersRef = collection(db, "users");
+        const usersSnapshot = await getDocs(usersRef);
+        
+        const customerCount = usersSnapshot.docs.filter(doc => {
+          const userData = doc.data();
+          return userData.role === "customer";
+        }).length;
+        
+        setActiveCustomers(customerCount);
+
+        // Fetch company data if user is authenticated
+        if (currentUser?.uid) {
+          const companyRef = collection(db, "users", currentUser.uid, "company");
+          const companySnapshot = await getDocs(companyRef);
+
+          if (!companySnapshot.empty) {
+            const companyDoc = companySnapshot.docs[0];
+            setCompanyData(companyDoc.data());
+
+            // Fetch products count
+            const productsRef = collection(
+              db,
+              "users",
+              currentUser.uid,
+              "company",
+              companyDoc.id,
+              "products"
+            );
+            const productsSnapshot = await getDocs(productsRef);
+            setTotalProducts(productsSnapshot.size);
+          }
         }
       } catch (error) {
-        console.error("Error fetching company data:", error);
+        console.error("Error fetching dashboard data:", error);
         setTotalProducts(0);
         setTotalOrders(0);
         setTotalRevenue(0);
@@ -323,17 +377,11 @@ const Dashboard = () => {
       }
     };
 
-    fetchCompanyData();
+    fetchDashboardData();
   }, [currentUser]);
 
   // Calculate statistics
   const totalStock = products.reduce((sum, item) => sum + item.stock, 0);
-  const deliveredOrders = sampleOrders.filter(
-    (order) => order.status === "Delivered"
-  ).length;
-  const processingOrders = sampleOrders.filter(
-    (order) => order.status === "Processing"
-  ).length;
 
   // Top selling products
   const topProducts = [...products]
@@ -344,9 +392,6 @@ const Dashboard = () => {
   const recentOrders = [...sampleOrders]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 5);
-
-  // Monthly target progress
-  const monthlyTargetProgress = 68;
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] max-h-screen mx-auto">
@@ -398,7 +443,7 @@ const Dashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue}</div>
+            <div className="text-2xl font-bold">Rs {totalRevenue.toFixed(2)}</div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <ArrowUpRight className="h-3.5 w-3.5 mr-1 text-green-500" />
               <span className="text-green-500 font-medium">+12.5%</span>
@@ -477,7 +522,7 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <Progress
-                  value={(deliveredOrders / totalOrders) * 100}
+                  value={totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0}
                   className="h-2 bg-muted"
                 />
               </div>
@@ -493,7 +538,7 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <Progress
-                  value={(processingOrders / totalOrders) * 100}
+                  value={totalOrders > 0 ? (processingOrders / totalOrders) * 100 : 0}
                   className="h-2 bg-muted"
                 />
               </div>
@@ -505,20 +550,11 @@ const Dashboard = () => {
                     <span className="text-sm">Pending</span>
                   </div>
                   <span className="text-sm font-medium">
-                    {
-                      sampleOrders.filter((order) => order.status === "Pending")
-                        .length
-                    }{" "}
-                    orders
+                    {pendingOrders} orders
                   </span>
                 </div>
                 <Progress
-                  value={
-                    (sampleOrders.filter((order) => order.status === "Pending")
-                      .length /
-                      totalOrders) *
-                    100
-                  }
+                  value={totalOrders > 0 ? (pendingOrders / totalOrders) * 100 : 0}
                   className="h-2 bg-muted"
                 />
               </div>
@@ -530,22 +566,11 @@ const Dashboard = () => {
                     <span className="text-sm">Cancelled</span>
                   </div>
                   <span className="text-sm font-medium">
-                    {
-                      sampleOrders.filter(
-                        (order) => order.status === "Cancelled"
-                      ).length
-                    }{" "}
-                    orders
+                    {cancelledOrders} orders
                   </span>
                 </div>
                 <Progress
-                  value={
-                    (sampleOrders.filter(
-                      (order) => order.status === "Cancelled"
-                    ).length /
-                      totalOrders) *
-                    100
-                  }
+                  value={totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0}
                   className="h-2 bg-muted"
                 />
               </div>
@@ -556,7 +581,7 @@ const Dashboard = () => {
         <Card className="col-span-1 md:col-span-2">
           <CardHeader>
             <CardTitle>Monthly Target</CardTitle>
-            <CardDescription>$50,000 sales goal for this month</CardDescription>
+            <CardDescription>Dynamic sales goal based on current performance</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
@@ -564,30 +589,32 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Progress</span>
                   <span className="text-sm font-medium">
-                    {monthlyTargetProgress}%
+                    {totalRevenue > 0 ? Math.min((totalRevenue / (totalRevenue * 10)) * 100, 100) : 0}%
                   </span>
                 </div>
-                <Progress value={monthlyTargetProgress} className="h-2" />
+                <Progress 
+                  value={totalRevenue > 0 ? Math.min((totalRevenue / (totalRevenue * 10)) * 100, 100) : 0} 
+                  className="h-2" 
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">Current</div>
                   <div className="text-2xl font-bold">
-                    ${((50000 * monthlyTargetProgress) / 100).toFixed(2)}
+                    Rs {totalRevenue.toFixed(2)}
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">Target</div>
-                  <div className="text-2xl font-bold">$50,000.00</div>
+                  <div className="text-2xl font-bold">Rs {(totalRevenue * 10).toFixed(2)}</div>
                 </div>
 
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">Remaining</div>
                   <div className="text-2xl font-bold">
-                    $
-                    {(50000 - (50000 * monthlyTargetProgress) / 100).toFixed(2)}
+                    Rs {(totalRevenue * 9).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -596,7 +623,7 @@ const Dashboard = () => {
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                   <span className="text-muted-foreground">
-                    13 days remaining
+                    Target: 10x current revenue
                   </span>
                 </div>
                 <Button variant="link" className="p-0 h-auto">
@@ -752,7 +779,7 @@ const Dashboard = () => {
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button variant="outline" size="sm">
-              <Link to={"/products"}>View All Products</Link>
+              <Link to={"/dashboard/products"}>View All Products</Link>
             </Button>
           </CardFooter>
         </Card>

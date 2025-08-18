@@ -3,6 +3,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { auth } from "../../firebase/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { ImageKitProvider } from "@imagekit/react";
 
 const AuthContext = React.createContext();
 
@@ -42,5 +43,8 @@ export function AuthProvider({ children }) {
   // Return the actual user object instead of just boolean values
   const value = { currentUser, loading };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>
+  <ImageKitProvider urlEndpoint="https://ik.imagekit.io/bishoECOM">{children}</ImageKitProvider>
+  
+  </AuthContext.Provider>;
 }

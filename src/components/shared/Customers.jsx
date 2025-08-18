@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
 import {
   Search,
   UserPlus,
@@ -75,270 +77,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-// Sample customers data
-const sampleCustomers = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Main St, New York, NY 10001",
-    totalSpent: 1250.75,
-    totalOrders: 8,
-    lastOrderDate: "2023-05-15",
-    status: "Active",
-    loyaltyPoints: 450,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-01-15",
-    customerRating: 4.8,
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1 (555) 987-6543",
-    address: "456 Oak Ave, San Francisco, CA 94102",
-    totalSpent: 890.5,
-    totalOrders: 5,
-    lastOrderDate: "2023-05-16",
-    status: "Active",
-    loyaltyPoints: 320,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-03-22",
-    customerRating: 4.5,
-  },
-  {
-    id: 3,
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    phone: "+1 (555) 456-7890",
-    address: "789 Pine Rd, Chicago, IL 60601",
-    totalSpent: 2100.25,
-    totalOrders: 12,
-    lastOrderDate: "2023-05-17",
-    status: "Active",
-    loyaltyPoints: 780,
-    avatar: "/placeholder.svg",
-    joinDate: "2021-11-05",
-    customerRating: 5.0,
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    phone: "+1 (555) 789-0123",
-    address: "321 Maple Dr, Boston, MA 02108",
-    totalSpent: 450.25,
-    totalOrders: 3,
-    lastOrderDate: "2023-05-14",
-    status: "Inactive",
-    loyaltyPoints: 120,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-06-10",
-    customerRating: 3.9,
-  },
-  {
-    id: 5,
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    phone: "+1 (555) 234-5678",
-    address: "654 Cedar Ln, Seattle, WA 98101",
-    totalSpent: 1500.0,
-    totalOrders: 9,
-    lastOrderDate: "2023-05-13",
-    status: "Active",
-    loyaltyPoints: 520,
-    avatar: "/placeholder.svg",
-    joinDate: "2021-09-18",
-    customerRating: 4.7,
-  },
-  {
-    id: 6,
-    name: "Sarah Wilson",
-    email: "sarah.wilson@example.com",
-    phone: "+1 (555) 345-6789",
-    address: "987 Birch St, Austin, TX 78701",
-    totalSpent: 750.5,
-    totalOrders: 4,
-    lastOrderDate: "2023-05-18",
-    status: "Active",
-    loyaltyPoints: 280,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-04-30",
-    customerRating: 4.2,
-  },
-  {
-    id: 7,
-    name: "David Taylor",
-    email: "david.taylor@example.com",
-    phone: "+1 (555) 567-8901",
-    address: "135 Elm Blvd, Denver, CO 80202",
-    totalSpent: 3200.99,
-    totalOrders: 15,
-    lastOrderDate: "2023-05-19",
-    status: "Active",
-    loyaltyPoints: 950,
-    avatar: "/placeholder.svg",
-    joinDate: "2021-07-12",
-    customerRating: 4.9,
-  },
-  {
-    id: 8,
-    name: "Lisa Anderson",
-    email: "lisa.anderson@example.com",
-    phone: "+1 (555) 678-9012",
-    address: "246 Willow Way, Miami, FL 33101",
-    totalSpent: 950.75,
-    totalOrders: 6,
-    lastOrderDate: "2023-05-12",
-    status: "Active",
-    loyaltyPoints: 380,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-02-08",
-    customerRating: 4.4,
-  },
-  {
-    id: 9,
-    name: "Thomas Martinez",
-    email: "thomas.martinez@example.com",
-    phone: "+1 (555) 789-0123",
-    address: "579 Spruce Ct, Philadelphia, PA 19102",
-    totalSpent: 1450.5,
-    totalOrders: 7,
-    lastOrderDate: "2023-05-11",
-    status: "Inactive",
-    loyaltyPoints: 0,
-    avatar: "/placeholder.svg",
-    joinDate: "2021-12-15",
-    customerRating: 3.5,
-  },
-  {
-    id: 10,
-    name: "Jessica Robinson",
-    email: "jessica.robinson@example.com",
-    phone: "+1 (555) 890-1234",
-    address: "864 Aspen Ave, Portland, OR 97201",
-    totalSpent: 670.25,
-    totalOrders: 4,
-    lastOrderDate: "2023-05-10",
-    status: "Active",
-    loyaltyPoints: 210,
-    avatar: "/placeholder.svg",
-    joinDate: "2022-05-20",
-    customerRating: 4.1,
-  },
-];
-
-// Sample orders data for customer details
-const sampleOrdersData = [
-  {
-    id: "ORD7823",
-    customerId: 1,
-    date: "2023-05-15",
-    status: "Delivered",
-    totalAmount: 125.99,
-    items: [
-      { id: 1, name: "OpenShop Premium T-Shirt", price: 29.99, quantity: 2 },
-      { id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 1 },
-      { id: 4, name: "OpenShop Laptop Sleeve", price: 24.99, quantity: 2 },
-    ],
-  },
-  {
-    id: "ORD7824",
-    customerId: 2,
-    date: "2023-05-16",
-    status: "Processing",
-    totalAmount: 89.5,
-    items: [
-      { id: 2, name: "OpenShop Wireless Earbuds", price: 89.99, quantity: 1 },
-    ],
-  },
-  {
-    id: "ORD7825",
-    customerId: 3,
-    date: "2023-05-17",
-    status: "Pending",
-    totalAmount: 210.75,
-    items: [
-      { id: 5, name: "OpenShop Smart Watch", price: 149.99, quantity: 1 },
-      { id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 4 },
-    ],
-  },
-  {
-    id: "ORD7826",
-    customerId: 4,
-    date: "2023-05-14",
-    status: "Delivered",
-    totalAmount: 45.25,
-    items: [{ id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 3 }],
-  },
-  {
-    id: "ORD7827",
-    customerId: 5,
-    date: "2023-05-13",
-    status: "Cancelled",
-    totalAmount: 150.0,
-    items: [
-      { id: 5, name: "OpenShop Smart Watch", price: 149.99, quantity: 1 },
-    ],
-  },
-  {
-    id: "ORD7828",
-    customerId: 1,
-    date: "2023-04-20",
-    status: "Delivered",
-    totalAmount: 179.97,
-    items: [
-      { id: 1, name: "OpenShop Premium T-Shirt", price: 29.99, quantity: 3 },
-      { id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 6 },
-    ],
-  },
-  {
-    id: "ORD7829",
-    customerId: 1,
-    date: "2023-03-15",
-    status: "Delivered",
-    totalAmount: 239.98,
-    items: [
-      { id: 2, name: "OpenShop Wireless Earbuds", price: 89.99, quantity: 2 },
-      { id: 4, name: "OpenShop Laptop Sleeve", price: 24.99, quantity: 2 },
-      { id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 2 },
-    ],
-  },
-  {
-    id: "ORD7830",
-    customerId: 1,
-    date: "2023-02-10",
-    status: "Delivered",
-    totalAmount: 149.99,
-    items: [
-      { id: 5, name: "OpenShop Smart Watch", price: 149.99, quantity: 1 },
-    ],
-  },
-  {
-    id: "ORD7831",
-    customerId: 3,
-    date: "2023-04-25",
-    status: "Delivered",
-    totalAmount: 269.97,
-    items: [
-      { id: 1, name: "OpenShop Premium T-Shirt", price: 29.99, quantity: 3 },
-      { id: 5, name: "OpenShop Smart Watch", price: 149.99, quantity: 1 },
-      { id: 3, name: "OpenShop Coffee Mug", price: 14.99, quantity: 2 },
-    ],
-  },
-  {
-    id: "ORD7832",
-    customerId: 3,
-    date: "2023-03-20",
-    status: "Delivered",
-    totalAmount: 179.98,
-    items: [
-      { id: 2, name: "OpenShop Wireless Earbuds", price: 89.99, quantity: 2 },
-    ],
-  },
-];
 
 // Customer Statistics Card Component
 const CustomerStatCard = ({
@@ -448,9 +186,7 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
   // Get customer orders
-  const customerOrders = sampleOrdersData.filter(
-    (order) => order.customerId === customer.id
-  );
+  const customerOrders = customer.orders || [];
 
   // Format date
   const formatDate = (dateString) => {
@@ -610,7 +346,7 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${customer.totalSpent.toFixed(2)}
+                        Rs {customer.totalSpent.toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Lifetime value
@@ -638,7 +374,7 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${averageOrderValue}
+                        Rs {averageOrderValue}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Average order value
@@ -676,8 +412,8 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                               <span className="font-bold">{order.id}</span>
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {formatDate(order.date)} • $
-                              {order.totalAmount.toFixed(2)}
+                              {formatDate(order.orderDate)} • Rs
+                              {order.orderSummary?.finalAmount || 0}
                             </p>
                             <OrderStatusBadge status={order.status} />
                           </div>
@@ -733,7 +469,7 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                               <TableCell className="font-medium">
                                 {order.id}
                               </TableCell>
-                              <TableCell>{formatDate(order.date)}</TableCell>
+                              <TableCell>{formatDate(order.orderDate)}</TableCell>
                               <TableCell>
                                 <OrderStatusBadge status={order.status} />
                               </TableCell>
@@ -744,7 +480,7 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                ${order.totalAmount.toFixed(2)}
+                                Rs {order.orderSummary?.finalAmount || 0}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -848,11 +584,11 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
                                     {item.name}
                                   </TableCell>
                                   <TableCell>
-                                    ${item.price.toFixed(2)}
+                                    Rs {item.price.toFixed(2)}
                                   </TableCell>
                                   <TableCell>{item.quantity}</TableCell>
                                   <TableCell className="text-right">
-                                    ${(item.price * item.quantity).toFixed(2)}
+                                    Rs {(item.price * item.quantity).toFixed(2)}
                                   </TableCell>
                                 </TableRow>
                               ))
@@ -877,15 +613,108 @@ const CustomerDetailDialog = ({ customer, isOpen, setIsOpen }) => {
 };
 
 const Customers = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+  // Fetch customers from Firestore
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true);
+        console.log("Customers: Fetching from users collection where role = customer");
+
+        // Fetch from the users collection where role = "customer"
+        const usersRef = collection(db, "users");
+        const usersSnapshot = await getDocs(usersRef);
+        console.log("Customers: Found", usersSnapshot.size, "users.");
+
+        // Fetch all orders to calculate customer statistics
+        const ordersRef = collection(db, "orders");
+        const ordersSnapshot = await getDocs(ordersRef);
+        console.log("Customers: Found", ordersSnapshot.size, "orders.");
+
+        // Create a map of customer orders
+        const customerOrdersMap = {};
+        ordersSnapshot.docs.forEach((orderDoc) => {
+          const orderData = orderDoc.data();
+          const userId = orderData.userId; // Changed from customerId to userId
+          if (userId) {
+            if (!customerOrdersMap[userId]) {
+              customerOrdersMap[userId] = [];
+            }
+            customerOrdersMap[userId].push({
+              id: orderDoc.id,
+              ...orderData
+            });
+          }
+        });
+
+        // Filter users with role = "customer" and transform data
+        const customersData = usersSnapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            // Only include users with role = "customer"
+            if (data.role === "customer") {
+              const customerId = doc.id;
+              const customerOrders = customerOrdersMap[customerId] || [];
+              
+              // Calculate real order statistics
+              const totalOrders = customerOrders.length;
+              const totalSpent = customerOrders.reduce((sum, order) => {
+                return sum + (order.orderSummary?.finalAmount || 0);
+              }, 0);
+              
+              // Get last order date
+              let lastOrderDate = "N/A";
+              if (customerOrders.length > 0) {
+                const sortedOrders = customerOrders.sort((a, b) => {
+                  return new Date(b.orderDate) - new Date(a.orderDate);
+                });
+                lastOrderDate = sortedOrders[0].orderDate || "N/A";
+              }
+
+              return {
+                id: customerId,
+                name: data.name || data.fname + " " + data.lname || "N/A",
+                email: data.email || "N/A",
+                phone: data.phone || "N/A",
+                address: data.address || "N/A",
+                totalSpent: totalSpent,
+                totalOrders: totalOrders,
+                lastOrderDate: lastOrderDate,
+                status: data.status || "Active",
+                loyaltyPoints: data.loyaltyPoints || 0,
+                avatar: data.avatar || "/placeholder.svg",
+                joinDate: data.createdAt || new Date().toISOString().split('T')[0],
+                customerRating: data.customerRating || 4.0,
+                orders: customerOrders, // Store actual orders for customer details
+              };
+            }
+            return null;
+          })
+          .filter(customer => customer !== null); // Remove null entries
+
+        console.log("Customers: Transformed data:", customersData);
+        setCustomers(customersData);
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        setCustomers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
   // Filter customers based on search query and status filter
   const filteredCustomers = useMemo(() => {
-    return sampleCustomers.filter((customer) => {
+    return customers.filter((customer) => {
       // Search filter
       const matchesSearch =
         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -899,7 +728,7 @@ const Customers = () => {
 
       return matchesSearch && matchesStatus;
     });
-  }, [sampleCustomers, searchQuery, statusFilter]);
+  }, [customers, searchQuery, statusFilter]);
 
   // Sort customers
   const sortedCustomers = useMemo(() => {
@@ -921,15 +750,15 @@ const Customers = () => {
 
   // Calculate customer statistics
   const customerStats = useMemo(() => {
-    const totalCustomers = sampleCustomers.length;
-    const activeCustomers = sampleCustomers.filter(
+    const totalCustomers = customers.length;
+    const activeCustomers = customers.filter(
       (c) => c.status === "Active"
     ).length;
-    const totalRevenue = sampleCustomers.reduce(
+    const totalRevenue = customers.reduce(
       (sum, c) => sum + c.totalSpent,
       0
     );
-    const totalOrders = sampleCustomers.reduce(
+    const totalOrders = customers.reduce(
       (sum, c) => sum + c.totalOrders,
       0
     );
@@ -942,7 +771,7 @@ const Customers = () => {
       totalOrders,
       avgOrderValue,
     };
-  }, [sampleCustomers]);
+  }, [customers]);
 
   // Handle customer click
   const handleCustomerClick = (customer) => {
@@ -959,304 +788,312 @@ const Customers = () => {
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="flex flex-col space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
-            <p className="text-muted-foreground">
-              Manage and analyze your customer base
-            </p>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <p>Loading customers...</p>
           </div>
-
-          <Button>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Customer
-          </Button>
-        </div>
-
-        {/* Customer Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <CustomerStatCard
-            title="Total Customers"
-            value={customerStats.totalCustomers}
-            icon={<Users className="h-4 w-4 text-blue-600" />}
-            description="in your database"
-            color="bg-blue-100"
-          />
-
-          <CustomerStatCard
-            title="Active Customers"
-            value={customerStats.activeCustomers}
-            icon={<Users className="h-4 w-4 text-green-600" />}
-            description="currently active"
-            trend="+5.2%"
-            color="bg-green-100"
-          />
-
-          <CustomerStatCard
-            title="Total Revenue"
-            value={`$${customerStats.totalRevenue.toFixed(2)}`}
-            icon={<CreditCard className="h-4 w-4 text-purple-600" />}
-            description="from all customers"
-            trend="+12.5%"
-            color="bg-purple-100"
-          />
-
-          <CustomerStatCard
-            title="Total Orders"
-            value={customerStats.totalOrders}
-            icon={<ShoppingBag className="h-4 w-4 text-orange-600" />}
-            description="across all customers"
-            trend="+8.1%"
-            color="bg-orange-100"
-          />
-
-          <CustomerStatCard
-            title="Avg. Order Value"
-            value={`$${customerStats.avgOrderValue.toFixed(2)}`}
-            icon={<CreditCard className="h-4 w-4 text-indigo-600" />}
-            description="per order"
-            trend="+3.2%"
-            color="bg-indigo-100"
-          />
-        </div>
-
-        {/* Customers Table with Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Management</CardTitle>
-            <CardDescription>
-              View and manage your customer database
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <div className="relative w-full sm:w-[350px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search customers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-full"
-                />
+        ) : (
+          <>
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+                <p className="text-muted-foreground">
+                  Manage and analyze your customer base
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Filter className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0" align="end">
-                    <div className="p-4 border-b">
-                      <p className="font-medium">Sort by</p>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <div
-                        className="flex items-center"
-                        onClick={() => setSortBy("name")}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border mr-2 ${
-                            sortBy === "name"
-                              ? "bg-primary border-primary"
-                              : "border-gray-300"
-                          }`}
-                        ></div>
-                        <span>Name</span>
-                      </div>
-                      <div
-                        className="flex items-center"
-                        onClick={() => setSortBy("spent")}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border mr-2 ${
-                            sortBy === "spent"
-                              ? "bg-primary border-primary"
-                              : "border-gray-300"
-                          }`}
-                        ></div>
-                        <span>Total Spent</span>
-                      </div>
-                      <div
-                        className="flex items-center"
-                        onClick={() => setSortBy("orders")}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border mr-2 ${
-                            sortBy === "orders"
-                              ? "bg-primary border-primary"
-                              : "border-gray-300"
-                          }`}
-                        ></div>
-                        <span>Order Count</span>
-                      </div>
-                      <div
-                        className="flex items-center"
-                        onClick={() => setSortBy("recent")}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border mr-2 ${
-                            sortBy === "recent"
-                              ? "bg-primary border-primary"
-                              : "border-gray-300"
-                          }`}
-                        ></div>
-                        <span>Most Recent</span>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Orders</TableHead>
-                    <TableHead>Total Spent</TableHead>
-                    <TableHead>Last Order</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedCustomers.length > 0 ? (
-                    sortedCustomers.map((customer) => (
-                      <TableRow
-                        key={customer.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleCustomerClick(customer)}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage
-                                src={customer.avatar}
-                                alt={customer.name}
-                              />
-                              <AvatarFallback>
-                                {customer.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{customer.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {customer.email}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              customer.status === "Active"
-                                ? "bg-green-100 text-green-800 border-green-300"
-                                : "bg-gray-100 text-gray-800 border-gray-300"
-                            }
+            {/* Customer Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <CustomerStatCard
+                title="Total Customers"
+                value={customerStats.totalCustomers}
+                icon={<Users className="h-4 w-4 text-blue-600" />}
+                description="in your database"
+                color="bg-blue-100"
+              />
+
+              <CustomerStatCard
+                title="Active Customers"
+                value={customerStats.activeCustomers}
+                icon={<Users className="h-4 w-4 text-green-600" />}
+                description="currently active"
+                trend="+5.2%"
+                color="bg-green-100"
+              />
+
+              <CustomerStatCard
+                title="Total Revenue"
+                value={`Rs ${customerStats.totalRevenue.toFixed(2)}`}
+                icon={<CreditCard className="h-4 w-4 text-purple-600" />}
+                description="from all customers"
+                trend="+12.5%"
+                color="bg-purple-100"
+              />
+
+              <CustomerStatCard
+                title="Total Orders"
+                value={customerStats.totalOrders}
+                icon={<ShoppingBag className="h-4 w-4 text-orange-600" />}
+                description="across all customers"
+                trend="+8.1%"
+                color="bg-orange-100"
+              />
+
+              <CustomerStatCard
+                title="Avg. Order Value"
+                value={`Rs ${customerStats.avgOrderValue.toFixed(2)}`}
+                icon={<CreditCard className="h-4 w-4 text-indigo-600" />}
+                description="per order"
+                trend="+3.2%"
+                color="bg-indigo-100"
+              />
+            </div>
+
+            {/* Customers Table with Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Management</CardTitle>
+                <CardDescription>
+                  View and manage your customer database
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div className="relative w-full sm:w-[350px]">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search customers..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 w-full"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Customers</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <Filter className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0" align="end">
+                        <div className="p-4 border-b">
+                          <p className="font-medium">Sort by</p>
+                        </div>
+                        <div className="p-4 space-y-2">
+                          <div
+                            className="flex items-center"
+                            onClick={() => setSortBy("name")}
                           >
-                            {customer.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{customer.totalOrders}</TableCell>
-                        <TableCell>${customer.totalSpent.toFixed(2)}</TableCell>
-                        <TableCell>
-                          {formatDate(customer.lastOrderDate)}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              asChild
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCustomerClick(customer);
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Customer
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Customer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center py-6 text-muted-foreground"
-                      >
-                        No customers found matching your filters.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border mr-2 ${
+                                sortBy === "name"
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            ></div>
+                            <span>Name</span>
+                          </div>
+                          <div
+                            className="flex items-center"
+                            onClick={() => setSortBy("spent")}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-full border mr-2 ${
+                                sortBy === "spent"
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            ></div>
+                            <span>Total Spent</span>
+                          </div>
+                          <div
+                            className="flex items-center"
+                            onClick={() => setSortBy("orders")}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-full border mr-2 ${
+                                sortBy === "orders"
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            ></div>
+                            <span>Order Count</span>
+                          </div>
+                          <div
+                            className="flex items-center"
+                            onClick={() => setSortBy("recent")}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-full border mr-2 ${
+                                sortBy === "recent"
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            ></div>
+                            <span>Most Recent</span>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
 
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                Showing{" "}
-                <span className="font-medium">{sortedCustomers.length}</span> of{" "}
-                <span className="font-medium">{sampleCustomers.length}</span>{" "}
-                customers
-              </div>
-              <div className="space-x-2">
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Orders</TableHead>
+                        <TableHead>Total Spent</TableHead>
+                        <TableHead>Last Order</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedCustomers.length > 0 ? (
+                        sortedCustomers.map((customer) => (
+                          <TableRow
+                            key={customer.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => handleCustomerClick(customer)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9">
+                                  <AvatarImage
+                                    src={customer.avatar}
+                                    alt={customer.name}
+                                  />
+                                  <AvatarFallback>
+                                    {customer.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{customer.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {customer.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  customer.status === "Active"
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : "bg-gray-100 text-gray-800 border-gray-300"
+                                }
+                              >
+                                {customer.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{customer.totalOrders}</TableCell>
+                            <TableCell>Rs {customer.totalSpent.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {formatDate(customer.lastOrderDate)}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCustomerClick(customer);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Customer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Customer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-6 text-muted-foreground"
+                          >
+                            No customers found matching your filters.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex items-center justify-end space-x-2 py-4">
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-medium">{sortedCustomers.length}</span> of{" "}
+                    <span className="font-medium">{customers.length}</span>{" "}
+                    customers
+                  </div>
+                  <div className="space-x-2">
+                    <Button variant="outline" size="sm" disabled>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled>
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Customer Detail Dialog */}

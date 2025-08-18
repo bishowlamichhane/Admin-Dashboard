@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
@@ -12,7 +12,6 @@ import {
   Edit,
   Check,
   Trash2,
-  Upload,
   ArrowUpDown,
   Eye,
   MoreHorizontal,
@@ -81,7 +80,6 @@ const sampleProducts = [
     stock: 150,
     featured: true,
     status: "Active",
-    sales: 42,
   },
   {
     id: 2,
@@ -92,7 +90,6 @@ const sampleProducts = [
     stock: 75,
     featured: true,
     status: "Active",
-    sales: 28,
   },
   {
     id: 3,
@@ -103,7 +100,6 @@ const sampleProducts = [
     stock: 200,
     featured: false,
     status: "Active",
-    sales: 35,
   },
   {
     id: 4,
@@ -114,7 +110,6 @@ const sampleProducts = [
     stock: 120,
     featured: false,
     status: "Active",
-    sales: 19,
   },
   {
     id: 5,
@@ -125,7 +120,6 @@ const sampleProducts = [
     stock: 50,
     featured: true,
     status: "Active",
-    sales: 23,
   },
   {
     id: 6,
@@ -201,8 +195,8 @@ const sampleProducts = [
 
 // OpenShop product categories
 const openShopCategories = [
-  "Electronics",
   "Clothing",
+  "Electronics",
   "Home",
   "Office",
   "Accessories",
@@ -233,12 +227,12 @@ const ProductItems = ({ item, isEdit, setisEdit, editProduct, onDelete }) => {
         color: "bg-yellow-100 text-yellow-800 border-yellow-300",
       };
     return {
-      label: "In Stock",
+      label: "Available",
       color: "bg-green-100 text-green-800 border-green-300",
     };
   };
 
-  const stockStatus = getStockStatus(item.stock);
+  const stockStatus = getStockStatus(item.stock||100);
 
   return (
     <TableRow key={item.id}>
@@ -264,16 +258,25 @@ const ProductItems = ({ item, isEdit, setisEdit, editProduct, onDelete }) => {
         </div>
       </TableCell>
       <TableCell>{item.name}</TableCell>
+      <TableCell>{item.category}</TableCell>
       <TableCell>{item.company}</TableCell>
+      <TableCell className="font-medium">Rs {item.price}</TableCell>
       <TableCell>
         <div
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${stockStatus.color}`}
         >
           {stockStatus.label}
-          <span className="ml-1.5 text-xs font-normal">({item.stock})</span>
+          <span className="ml-1.5 text-xs font-normal">({item.stock||100})</span>
         </div>
       </TableCell>
-      <TableCell className="font-medium">Rs {item.price}</TableCell>
+      <TableCell className="text-center">
+        {item.featured ? "Yes" : "No"}
+      </TableCell>
+      <TableCell className="text-center">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border-green-300">
+          Active
+        </span>
+      </TableCell>
       <TableCell>
         {isEdit ? (
           <div className="flex justify-end space-x-2">
@@ -383,24 +386,18 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
-  const [isUploadProductsModalOpen, setIsUploadProductsModalOpen] =
-    useState(false);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [newProductData, setNewProductData] = useState({
     name: "",
     price: "",
-    category: "Electronics",
+    category: "Clothing",
     stock: "",
     featured: false,
     status: "Active",
-    sales: 0,
-    image: "", // Placeholder for image URL
+    image: null, // Changed from string to null for file input
   });
-
-  // Ref for the file input
-  const fileInputRef = useRef(null);
 
   // Fetch products from Firestore
   useEffect(() => {
@@ -446,7 +443,7 @@ const Products = () => {
             image: doc.data().image
               ? `/${doc.data().image}`
               : "/placeholder.svg", // Prepend / to image path
-            category: doc.data().category || "Uncategorized", // Map original category field
+            category: doc.data().category || "Cothing", // Map original category field
             company: doc.data().company || "N/A", // Ensure company field is mapped separately
             stock: doc.data().stock || 0,
             featured: doc.data().featured || false,
@@ -531,9 +528,16 @@ const Products = () => {
     }
 
     setLoading(true);
-    let imageUrl = newProductData.image;
+    let imageUrl = "";
 
     try {
+      // Handle image file if selected
+      if (newProductData.image) {
+        // For now, we'll use a placeholder image path
+        // In a real app, you'd upload to Firebase Storage and get the URL
+        imageUrl = `/images/${newProductData.image.name}`;
+      }
+
       const companyRef = collection(db, "users", currentUser.uid, "company");
       const companySnapshot = await getDocs(companyRef);
 
@@ -557,7 +561,6 @@ const Products = () => {
           stock: parseInt(newProductData.stock),
           featured: newProductData.featured,
           status: newProductData.status,
-          sales: newProductData.sales,
           image: imageUrl,
           company: companyDoc.data().name || "N/A",
           original_price: parseFloat(
@@ -571,7 +574,8 @@ const Products = () => {
 
         alert("Product added successfully!");
         setIsNewProductModalOpen(false);
-        fetchProducts(); // Call fetchProducts to refresh the list
+        // Refresh the products list
+        window.location.reload(); // Simple refresh for now
       }
     } catch (error) {
       console.error("Error adding product:", error);
@@ -581,12 +585,11 @@ const Products = () => {
       setNewProductData({
         name: "",
         price: "",
-        category: "Electronics",
+        category: "Clothing",
         stock: "",
         featured: false,
         status: "Active",
-        sales: 0,
-        image: "",
+        image: null,
       });
     }
   };
@@ -630,26 +633,7 @@ const Products = () => {
     selectedProducts.size === filteredProducts.length &&
     filteredProducts.length > 0;
 
-  // Handle file upload for bulk products
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          // Assuming the JSON data is an array of products
-          dispatch(itemsAction.addBulkItems(data));
-          setIsUploadProductsModalOpen(false);
-          alert("Products uploaded successfully!");
-        } catch (error) {
-          console.error("Error parsing JSON file:", error);
-          alert("Failed to upload products. Invalid JSON format.");
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
+  // Remove the unused handleFileUpload function
 
   return (
     <div className="flex flex-col flex-1 p-4 bg-slate-100 dark:bg-slate-950">
@@ -787,46 +771,6 @@ const Products = () => {
                       </AlertDialog>
                     )}
 
-                    <AlertDialog
-                      open={isUploadProductsModalOpen}
-                      onOpenChange={setIsUploadProductsModalOpen}
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full sm:w-auto"
-                        >
-                          <Upload className="mr-2 h-4 w-4" /> Upload Products
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Upload Products</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Upload a JSON file containing product data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <Input
-                            id="file"
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            accept=".json"
-                          />
-                        </div>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => fileInputRef.current.click()}
-                          >
-                            Upload
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-
                     <Button
                       size="sm"
                       onClick={() => setIsNewProductModalOpen(true)}
@@ -866,7 +810,6 @@ const Products = () => {
                             Featured
                           </TableHead>
                           <TableHead className="text-center">Status</TableHead>
-                          <TableHead className="text-center">Sales</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -912,7 +855,6 @@ const Products = () => {
                             Featured
                           </TableHead>
                           <TableHead className="text-center">Status</TableHead>
-                          <TableHead className="text-center">Sales</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -980,14 +922,19 @@ const Products = () => {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="image" className="text-right">
-                    Image URL
+                    Image
                   </Label>
                   <Input
                     id="image"
-                    defaultValue="/images/product.png"
+                    type="file"
+                    accept="image/*"
                     className="col-span-3"
-                    value={newProductData.image}
-                    onChange={handleNewProductChange}
+                    onChange={(e) => {
+                      setNewProductData((prev) => ({
+                        ...prev,
+                        image: e.target.files[0],
+                      }));
+                    }}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
