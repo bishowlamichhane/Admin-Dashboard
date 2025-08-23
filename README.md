@@ -66,7 +66,7 @@ The React Admin Dashboard is a robust and customizable platform designed for man
 📸 **Screenshots**
 ----------------
 
-[Insert screenshots of the dashboard in action]
+<img width="1891" height="911" alt="image" src="https://github.com/user-attachments/assets/2ead1b4d-3eee-4b6d-b51b-34c514e6f4cf" />
 
 📦 **API Reference**
 -----------------
