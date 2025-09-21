@@ -56,7 +56,7 @@ const Header = () => {
                 OS
               </div>
               <span className="font-bold text-xl hidden sm:inline-block">
-                Open Shop
+                Nova Wears
               </span>
             </Link>
           </div>
@@ -143,7 +143,7 @@ const Header = () => {
                       <div className="w-10 h-10 rounded-full bg-gradient-to-r from-rose-500 to-indigo-500 flex items-center justify-center text-white font-bold text-lg">
                         OS
                       </div>
-                      <span className="font-bold text-xl">Open Shop</span>
+                      <span className="font-bold text-xl">Nova Wears</span>
                     </Link>
                   </div>
 
