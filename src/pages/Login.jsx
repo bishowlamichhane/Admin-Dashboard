@@ -35,7 +35,7 @@ const Login = () => {
         if (email === "admin4545@openshop.com" && password === "admin4545");
         {
           await doSignInWithEmailAndPassword(email, password);
-          navigate("/admin-dashboard");
+          navigate("/dashboard");
         }
 
         const userCredential = await doSignInWithEmailAndPassword(

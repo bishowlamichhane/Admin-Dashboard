@@ -6,7 +6,6 @@ import App from "./App.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { ThemeProvider } from "./components/theme-provider";
 import { AuthProvider } from "./contexts/authContext";
@@ -36,7 +35,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route element={<ProtectedRoute />}>
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
                 <Route path="/dashboard" element={<App />}>
                   <Route index element={<Dashboard />} />
                   <Route path="products" element={<Products />} />

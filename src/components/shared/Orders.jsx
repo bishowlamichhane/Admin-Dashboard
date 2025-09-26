@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { useState, useMemo, useEffect, useCallback, memo, Fragment } from "react";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import {
   Search,
@@ -44,8 +44,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+const OrderItems = memo(({ item, onToggle }) => {
 
-const OrderItems = ({ item }) => {
   const getStatusColor = (status) => {
     if (!status) return "bg-gray-100 text-gray-800 border-gray-300";
 
@@ -62,6 +62,7 @@ const OrderItems = ({ item }) => {
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
+  console.log(item)
 
   const getStatusIcon = (status) => {
     if (!status) return <Package className="h-4 w-4 mr-1" />;
@@ -86,10 +87,11 @@ const OrderItems = ({ item }) => {
   };
 
   return (
-    <TableRow>
+
+    <TableRow className="w-full">
       <TableCell>
-        <Button variant="ghost" size="sm">
-          <ChevronDown className="h-4 w-4" />
+        <Button variant="ghost" size="md" onClick={onToggle}>
+          <ChevronDown className="h-4 w-4"/>
         </Button>
       </TableCell>
       <TableCell className="font-medium">{item.id}</TableCell>
@@ -109,8 +111,11 @@ const OrderItems = ({ item }) => {
         Rs {item.totalAmount.toFixed(2)}
       </TableCell>
     </TableRow>
+
+    
+        
   );
-};
+});
 
 const OrderStatusCard = ({ title, count, icon, description, color }) => {
   return (
@@ -127,10 +132,24 @@ const OrderStatusCard = ({ title, count, icon, description, color }) => {
   );
 };
 
-const OrdersTable = ({ orders, status }) => {
+const OrdersTable = memo(({ orders, status, onChangeStatus }) => {
   const statusMessage = status
     ? `No ${status.toLowerCase()} orders found.`
     : "No orders found matching your filters.";
+    const [expandedRowId, setExpandedRowId] = useState(null)
+    const [updatingId, setUpdatingId] = useState(null)
+    const handleToggle = useCallback((id) => {
+      setExpandedRowId((prev) => (prev === id ? null : id));
+    }, []);
+    const handleChangeStatusClick = async (order) => {
+      if (!onChangeStatus) return;
+      try {
+        setUpdatingId(order.id);
+        await onChangeStatus(order.id, order.status);
+      } finally {
+        setUpdatingId(null);
+      }
+    };
 
   return (
     <div className="rounded-md border overflow-x-auto">
@@ -147,7 +166,66 @@ const OrdersTable = ({ orders, status }) => {
         </TableHeader>
         <TableBody>
           {orders.length > 0 ? (
-            orders.map((order) => <OrderItems key={order.id} item={order} />)
+            orders.map((order) => (
+              <Fragment key={order.id}>
+                <OrderItems item={order} onToggle={() => handleToggle(order.id)} />
+                {expandedRowId === order.id && (
+                  <TableRow key={`${order.id}-details`}>
+                    <TableCell colSpan={6}>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm w-full">
+                        <div>
+                          <div className="font-medium mb-1">Items</div>
+                          <div className="text-muted-foreground">
+                            {typeof order.itemsCount === "number" ? order.itemsCount : (Array.isArray(order.items) ? order.items.length : 0)} item(s)
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium mb-1">Shipping Address</div>
+                          <div className="text-muted-foreground">
+                            {order.address ? (
+                              typeof order.address === "string" ? (
+                                order.address
+                              ) : (
+                                <>
+                                  {order.address.name && <div>{order.address.name}</div>}
+                                  {order.address.line1 && <div>{order.address.line1}</div>}
+                                  {order.address.line2 && <div>{order.address.line2}</div>}
+                                  {(order.address.city || order.address.state || order.address.postalCode) && (
+                                    <div>
+                                      {[order.address.city, order.address.state, order.address.postalCode].filter(Boolean).join(", ")}
+                                    </div>
+                                  )}
+                                  {order.address.country && <div>{order.address.country}</div>}
+                                  {order.address.phone && <div>Phone: {order.address.phone}</div>}
+                                </>
+                              )
+                            ) : (
+                              <span>No address available</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex md:justify-end items-start md:items-center">
+                          {(order.status?.toLowerCase() === "pending" || order.status?.toLowerCase() === "processing") && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleChangeStatusClick(order)}
+                              disabled={updatingId === order.id}
+                            >
+                              {updatingId === order.id
+                                ? "Updating..."
+                                : order.status?.toLowerCase() === "pending"
+                                ? "Mark as Processing"
+                                : "Mark as Delivered"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            ))
           ) : (
             <TableRow>
               <TableCell
@@ -159,10 +237,11 @@ const OrdersTable = ({ orders, status }) => {
             </TableRow>
           )}
         </TableBody>
+
       </Table>
     </div>
   );
-};
+});
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -170,6 +249,7 @@ const Orders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
+  const [savingStatusId, setSavingStatusId] = useState(null);
 
   // Fetch orders from Firestore
   useEffect(() => {
@@ -192,6 +272,21 @@ const Orders = () => {
             status: data.status || "Pending",
             date: data.orderDate || new Date().toISOString().split('T')[0],
             totalAmount: data.orderSummary?.finalAmount || 0,
+            // Try common item fields; fallback to empty
+            items: data.items || data.orderItems || data.cartItems || data.products || [],
+            // Capture any explicit count if present
+            itemsCount:
+              data.totalItems ||
+              data.itemCount ||
+              data.itemsCount ||
+              (Array.isArray(data.items) ? data.items.length : undefined),
+            // Try common address fields; fallback to null
+            address:
+              data.shippingAddress ||
+              data.address ||
+              data.deliveryAddress ||
+              data.customerAddress ||
+              null,
           };
         });
         console.log("Orders: Transformed data:", ordersData);
@@ -206,6 +301,22 @@ const Orders = () => {
     };
 
     fetchOrders();
+  }, []);
+
+  const handleChangeStatus = useCallback(async (orderId, currentStatus) => {
+    try {
+      setSavingStatusId(orderId);
+      const nextStatus = (currentStatus || "").toLowerCase() === "pending" ? "processing" : "delivered";
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, { status: nextStatus });
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+      );
+    } catch (e) {
+      console.error("Failed to update order status", e);
+    } finally {
+      setSavingStatusId(null);
+    }
   }, []);
 
   // Calculate order statistics
@@ -454,7 +565,7 @@ const Orders = () => {
                     </div>
                   </div>
 
-                  <OrdersTable orders={filteredOrders} status={statusFilter} />
+                  <OrdersTable orders={filteredOrders} status={statusFilter} onChangeStatus={handleChangeStatus} />
                 </Tabs>
               </CardContent>
             </Card>
