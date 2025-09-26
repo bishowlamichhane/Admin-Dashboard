@@ -142,7 +142,7 @@ const Sidebar = ({ userData, companyData, handleLogout, isSidebarOpen }) => {
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <span className="font-bold text-xl text-white">
-                {companyData?.name || "OpenShop"}
+                {companyData?.name || "NovaWears"}
               </span>
             </Link>
           )}
